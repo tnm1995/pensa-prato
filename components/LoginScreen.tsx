@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { auth, googleProvider, signInWithPopup, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from '../services/firebase';
+import { auth, googleProvider, signInWithPopup, signInWithEmailAndPassword } from '../services/firebase';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, CheckSquare, Square } from 'lucide-react';
 import { Logo } from './Logo';
 
