@@ -15,7 +15,6 @@ interface ProfileScreenProps {
   recipesCount?: number;
   isAdmin?: boolean;
   onOpenAdmin?: () => void;
-  onEnableAdminDebug?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
@@ -30,8 +29,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onUpdatePantry,
     recipesCount = 0,
     isAdmin = false,
-    onOpenAdmin,
-    onEnableAdminDebug
+    onOpenAdmin
 }) => {
   // Safe destructuring with defaults to avoid crash if profile is temporarily undefined
   const { name = 'Usuário', avatar = '', dislikes: initialDislikes = '', restrictions: initialRestrictions = [] } = userProfile || {};
@@ -46,9 +44,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   
   // Refs for scrolling
   const pantryRef = useRef<HTMLDivElement>(null);
-
-  // Debug Secret
-  const [debugClicks, setDebugClicks] = useState(0);
 
   // Collapsible state
   // Auto-open Pantry if it's empty to encourage filling it out
@@ -109,18 +104,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       }, 100);
   };
   
-  const handleVersionClick = () => {
-      const newCount = debugClicks + 1;
-      setDebugClicks(newCount);
-      if (newCount === 7) {
-          if (onEnableAdminDebug) {
-              onEnableAdminDebug();
-              alert("👨‍💻 Modo Desenvolvedor Ativado! O painel admin está visível.");
-          }
-          setDebugClicks(0);
-      }
-  };
-
   // Stats vinculados aos dados reais
   const stats = [
     { label: "Receitas Feitas", value: recipesCount.toString(), icon: ChefHat, color: "text-blue-500", bg: "bg-blue-50" }, 
@@ -414,7 +397,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </button>
             </div>
             
-            {/* PROMINENT ADMIN BUTTON IN LIST */}
+            {/* PROMINENT ADMIN BUTTON IN LIST - Only Visible if isAdmin is True */}
             {isAdmin && onOpenAdmin && (
                 <button 
                     onClick={onOpenAdmin}
@@ -439,10 +422,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 Sair do App
             </button>
             
-            <p 
-                onClick={handleVersionClick}
-                className="text-center text-[10px] text-gray-400 font-medium pt-4 pb-2 cursor-pointer select-none"
-            >
+            <p className="text-center text-[10px] text-gray-400 font-medium pt-4 pb-2 select-none">
                 Versão 2.7.0 • Pensa Prato
             </p>
         </div>
