@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, ChevronDown, ChevronUp, Package, Shield } from 'lucide-react';
 import { Recipe, FamilyMember } from '../types';
@@ -16,6 +15,7 @@ interface ProfileScreenProps {
   recipesCount?: number;
   isAdmin?: boolean;
   onOpenAdmin?: () => void;
+  onEnableAdminDebug?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
@@ -30,7 +30,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onUpdatePantry,
     recipesCount = 0,
     isAdmin = false,
-    onOpenAdmin
+    onOpenAdmin,
+    onEnableAdminDebug
 }) => {
   // Safe destructuring with defaults to avoid crash if profile is temporarily undefined
   const { name = 'Usuário', avatar = '', dislikes: initialDislikes = '', restrictions: initialRestrictions = [] } = userProfile || {};
@@ -45,6 +46,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   
   // Refs for scrolling
   const pantryRef = useRef<HTMLDivElement>(null);
+
+  // Debug Secret
+  const [debugClicks, setDebugClicks] = useState(0);
 
   // Collapsible state
   // Auto-open Pantry if it's empty to encourage filling it out
@@ -103,6 +107,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setTimeout(() => {
           pantryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
+  };
+  
+  const handleVersionClick = () => {
+      const newCount = debugClicks + 1;
+      setDebugClicks(newCount);
+      if (newCount === 7) {
+          if (onEnableAdminDebug) {
+              onEnableAdminDebug();
+              alert("👨‍💻 Modo Desenvolvedor Ativado! O painel admin está visível.");
+          }
+          setDebugClicks(0);
+      }
   };
 
   // Stats vinculados aos dados reais
@@ -402,7 +418,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {isAdmin && onOpenAdmin && (
                 <button 
                     onClick={onOpenAdmin}
-                    className="w-full bg-purple-50 text-purple-700 border-2 border-purple-100 font-bold p-4 rounded-[1.5rem] flex items-center justify-between hover:bg-purple-100 transition-colors shadow-sm group"
+                    className="w-full bg-purple-50 text-purple-700 border-2 border-purple-100 font-bold p-4 rounded-[1.5rem] flex items-center justify-between hover:bg-purple-100 transition-colors shadow-sm group animate-in zoom-in duration-300"
                 >
                     <div className="flex items-center gap-4">
                         <div className="p-2.5 bg-purple-200 rounded-xl text-purple-700 shadow-sm"><Shield className="w-6 h-6" /></div>
@@ -423,7 +439,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 Sair do App
             </button>
             
-            <p className="text-center text-[10px] text-gray-400 font-medium pt-4 pb-2">
+            <p 
+                onClick={handleVersionClick}
+                className="text-center text-[10px] text-gray-400 font-medium pt-4 pb-2 cursor-pointer select-none"
+            >
                 Versão 2.7.0 • Pensa Prato
             </p>
         </div>

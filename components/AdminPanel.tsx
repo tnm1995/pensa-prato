@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
-import { db, collection, getDoc, doc, deleteDoc, updateDoc } from '../services/firebase';
-import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import { db, collection, doc, deleteDoc, updateDoc } from '../services/firebase';
+import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw } from 'lucide-react';
 import { FamilyMember } from '../types';
 
 interface AdminPanelProps {
@@ -30,37 +29,59 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
   const fetchAllUsers = async () => {
     setLoading(true);
     try {
+      // Access Firestore raw collection if possible, or use the shim
+      // NOTE: collection(db, 'users') returns a CollectionReference in compat mode
       const usersRef = collection(db, 'users');
       const snapshot = await usersRef.get();
       
       const userList: UserSummary[] = [];
 
+      // Use Promise.all to fetch subcollections in parallel
       await Promise.all(snapshot.docs.map(async (userDoc: any) => {
         const uid = userDoc.id;
         const userData = userDoc.data();
         
-        // Fetch Primary Profile
         let primaryName = 'Sem Nome';
+        let familyCount = 0;
+        let pantryCount = 0;
+        let historyCount = 0;
+
         try {
-            const primaryRef = await db.collection('users').doc(uid).collection('family').doc('primary').get();
-            if (primaryRef.exists) {
-                primaryName = primaryRef.data()?.name || 'Sem Nome';
+            // Raw Firestore access for subcollections
+            const userRef = db.collection('users').doc(uid);
+            
+            // Family
+            const familySnap = await userRef.collection('family').get();
+            familyCount = familySnap.size;
+            
+            const primaryDoc = familySnap.docs.find((d: any) => d.id === 'primary');
+            if (primaryDoc) {
+                primaryName = primaryDoc.data().name;
+            } else if (familySnap.size > 0) {
+                primaryName = familySnap.docs[0].data().name;
             }
-        } catch (e) {}
 
-        const familySnap = await db.collection('users').doc(uid).collection('family').get();
-        const pantrySnap = await db.collection('users').doc(uid).collection('settings').doc('pantry').get();
-        const historySnap = await db.collection('users').doc(uid).collection('history').get();
+            // Pantry
+            const pantryDoc = await userRef.collection('settings').doc('pantry').get();
+            if (pantryDoc.exists) {
+                pantryCount = pantryDoc.data()?.items?.length || 0;
+            }
 
-        const pantryCount = pantrySnap.exists ? (pantrySnap.data()?.items?.length || 0) : 0;
+            // History
+            const historySnap = await userRef.collection('history').get();
+            historyCount = historySnap.size;
+
+        } catch (subErr) {
+            console.warn(`Error fetching subdata for ${uid}`, subErr);
+        }
 
         userList.push({
             uid,
-            email: userData.email || '',
+            email: userData.email || 'No Email',
             primaryName,
-            familyCount: familySnap.size,
-            pantryCount: pantryCount,
-            historyCount: historySnap.size,
+            familyCount,
+            pantryCount,
+            historyCount,
             isAdmin: userData.isAdmin === true
         });
       }));
@@ -68,7 +89,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
       setUsers(userList);
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
-      alert("Erro ao buscar dados. Verifique as regras de segurança do Firebase.");
+      alert("Erro ao buscar dados. Se você acabou de ativar o admin, verifique se sua conta tem permissão no Firestore.");
     } finally {
       setLoading(false);
     }
@@ -106,13 +127,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
   const handleViewDetails = async (uid: string) => {
       setLoading(true);
       try {
-          const familySnap = await db.collection('users').doc(uid).collection('family').get();
+          const userRef = db.collection('users').doc(uid);
+          
+          const familySnap = await userRef.collection('family').get();
           const family = familySnap.docs.map((d: any) => d.data());
           
-          const pantrySnap = await db.collection('users').doc(uid).collection('settings').doc('pantry').get();
+          const pantrySnap = await userRef.collection('settings').doc('pantry').get();
           const pantry = pantrySnap.exists ? pantrySnap.data()?.items : [];
 
-          const historySnap = await db.collection('users').doc(uid).collection('history').get();
+          const historySnap = await userRef.collection('history').get();
           const history = historySnap.docs.map((d: any) => d.data());
 
           setSelectedUser({
@@ -139,7 +162,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
   if (viewMode === 'detail' && selectedUser) {
       return (
           <div className="min-h-screen bg-gray-100 p-6">
-              <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+              <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-300">
                   <div className="bg-gray-800 p-6 flex items-center justify-between text-white">
                       <div className="flex items-center gap-4">
                           <button onClick={() => setViewMode('list')} className="p-2 hover:bg-white/20 rounded-full"><ArrowLeft /></button>
@@ -176,9 +199,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
 
                       {/* Pantry Section */}
                       <div>
-                          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Database className="w-5 h-5 text-emerald-500" /> Despensa ({selectedUser.pantry.length})</h3>
+                          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Database className="w-5 h-5 text-emerald-500" /> Despensa ({selectedUser.pantry?.length || 0})</h3>
                           <div className="flex flex-wrap gap-2">
-                              {selectedUser.pantry.length > 0 ? selectedUser.pantry.map((item: string, idx: number) => (
+                              {selectedUser.pantry && selectedUser.pantry.length > 0 ? selectedUser.pantry.map((item: string, idx: number) => (
                                   <span key={idx} className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-sm border border-emerald-100">{item}</span>
                               )) : <p className="text-gray-400 italic">Despensa vazia.</p>}
                           </div>
@@ -187,11 +210,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                       {/* History Section */}
                       <div>
                           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><ChefHat className="w-5 h-5 text-orange-500" /> Histórico ({selectedUser.history.length})</h3>
-                          <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                          <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                               {selectedUser.history.map((recipe: any, idx: number) => (
                                   <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm">
                                       <span className="font-medium text-gray-700">{recipe.title}</span>
-                                      <span className="text-gray-400 text-xs">{new Date(recipe.cookedAt).toLocaleDateString()}</span>
+                                      <span className="text-gray-400 text-xs">{recipe.cookedAt ? new Date(recipe.cookedAt).toLocaleDateString() : '-'}</span>
                                   </div>
                               ))}
                           </div>
