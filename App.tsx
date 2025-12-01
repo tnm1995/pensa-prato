@@ -65,6 +65,14 @@ function App() {
   const viewRef = useRef(currentView);
   useEffect(() => { viewRef.current = currentView; }, [currentView]);
 
+  // Safe map helper for snapshots
+  const safeMapDocs = (snap: any, mapper: (doc: any) => any) => {
+    if (snap && snap.docs && Array.isArray(snap.docs)) {
+      return snap.docs.map(mapper);
+    }
+    return [];
+  };
+
   // FIREBASE AUTH + SYNC
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -79,7 +87,7 @@ function App() {
              // FAMILY
              const familyRef = collection(db, 'users', currentUser.uid, 'family');
              onSnapshot(familyRef, (snap) => {
-               const data = snap.docs.map(d => ({ ...d.data(), id: d.id } as FamilyMember));
+               const data = safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember));
                if (data.length === 0) {
                  const primary: FamilyMember = {
                    id: 'primary',
@@ -89,7 +97,8 @@ function App() {
                    restrictions: [],
                    isChild: false
                  };
-                 setDoc(doc(db, 'users', currentUser.uid, 'family', 'primary'), primary);
+                 // We don't await here to avoid blocking, just fire and forget
+                 setDoc(doc(db, 'users', currentUser.uid, 'family', 'primary'), primary).catch(console.warn);
                  setFamilyMembers([primary]);
                } else {
                  setFamilyMembers(data);
@@ -98,22 +107,25 @@ function App() {
 
              // FAVORITES
              const favRef = collection(db, 'users', currentUser.uid, 'favorites');
-             onSnapshot(favRef, s => setFavoriteRecipes(s.docs.map(d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe))), (err) => console.warn("Fav sync error", err));
+             onSnapshot(favRef, s => setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe))), (err) => console.warn("Fav sync error", err));
 
              // HISTORY
              const historyRef = collection(db, 'users', currentUser.uid, 'history');
-             onSnapshot(historyRef, s => setCookedHistory(s.docs.map(d => d.data() as Recipe)), (err) => console.warn("History sync error", err));
+             onSnapshot(historyRef, s => setCookedHistory(safeMapDocs(s, d => d.data() as Recipe)), (err) => console.warn("History sync error", err));
 
              // SHOPPING
              const shoppingRef = collection(db, 'users', currentUser.uid, 'shopping');
-             onSnapshot(shoppingRef, s => setShoppingList(s.docs.map(d => ({ ...d.data(), id: d.id } as ShoppingItem))), (err) => console.warn("Shopping sync error", err));
+             onSnapshot(shoppingRef, s => setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem))), (err) => console.warn("Shopping sync error", err));
 
              // PANTRY
              const pantryRef = doc(db, 'users', currentUser.uid, 'settings', 'pantry');
              onSnapshot(pantryRef, (s) => {
                  // CRITICAL FIX: Handle both modular SDK (function) and compat SDK (property)
+                 // Also check if s is valid
+                 if (!s) return;
                  const exists = typeof s.exists === 'function' ? s.exists() : s.exists;
-                 setPantryItems(exists ? s.data()?.items || [] : []);
+                 const data = typeof s.data === 'function' ? s.data() : s.data;
+                 setPantryItems(exists && data ? data.items || [] : []);
              }, (err) => console.warn("Pantry sync error", err));
           }
 
@@ -179,7 +191,11 @@ function App() {
 
   useEffect(() => {
     if (user && activeProfiles.length > 0) {
-      localStorage.setItem(`active_profiles_${user.uid}`, JSON.stringify(activeProfiles.map(m => m.id)));
+      try {
+          localStorage.setItem(`active_profiles_${user.uid}`, JSON.stringify(activeProfiles.map(m => m.id)));
+      } catch (e) {
+          console.warn("LocalStorage set error", e);
+      }
     }
   }, [activeProfiles, user]);
 
@@ -189,8 +205,10 @@ function App() {
   };
   
   const handleUpdatePantry = async (items: string[]) => {
-    if (!user) return;
-    await setDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items });
+    if (!user || !db) return;
+    try {
+        await setDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items });
+    } catch(e) { console.error(e); }
   };
   
   const handleSaveMember = async (memberToSave: FamilyMember) => {
@@ -204,7 +222,7 @@ function App() {
       return;
     }
 
-    if (!user) return;
+    if (!user || !db) return;
     try {
         const isNew = !memberToSave.id || memberToSave.id.startsWith('temp-');
         
@@ -229,7 +247,7 @@ function App() {
         });
         return;
     }
-    if (!user) return;
+    if (!user || !db) return;
     try {
         const existing = favoriteRecipes.find(r => r.title === recipe.title);
         if (existing) {
@@ -248,7 +266,7 @@ function App() {
         setCookedHistory(prev => [...prev, recipe]);
         return;
     }
-    if (user) {
+    if (user && db) {
         try {
           const dataToSave = { 
               ...recipe, 
@@ -263,7 +281,7 @@ function App() {
 
   const handleRateRecipe = async (recipe: Recipe, rating: number) => {
     if (isDemoMode) return;
-    if (!user) return;
+    if (!user || !db) return;
     try {
         const existing = favoriteRecipes.find(r => r.title === recipe.title);
         if (existing) {
@@ -282,7 +300,7 @@ function App() {
         setShoppingList(prev => [...prev, { id: Date.now().toString(), name, quantity, checked: false }]);
         return;
     }
-    if (!user) return;
+    if (!user || !db) return;
     try {
         await addDoc(collection(db, 'users', user.uid, 'shopping'), {
             name, quantity, checked: false, createdAt: Date.now()
@@ -295,7 +313,7 @@ function App() {
         setShoppingList(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
         return;
     }
-    if (!user) return;
+    if (!user || !db) return;
     try {
         const item = shoppingList.find(i => i.id === id);
         if (item) await updateDoc(doc(db, 'users', user.uid, 'shopping', id), { checked: !item.checked });
@@ -307,7 +325,7 @@ function App() {
         setShoppingList(prev => prev.map(i => i.id === id ? { ...i, name, quantity } : i));
         return;
     }
-    if (!user) return;
+    if (!user || !db) return;
     try {
         await updateDoc(doc(db, 'users', user.uid, 'shopping', id), { name, quantity });
     } catch (e) { console.error(e); }
@@ -318,7 +336,7 @@ function App() {
         setShoppingList(prev => prev.filter(i => i.id !== id));
         return;
     }
-    if (!user) return;
+    if (!user || !db) return;
     try {
         await deleteDoc(doc(db, 'users', user.uid, 'shopping', id));
     } catch (e) { console.error(e); }
@@ -329,7 +347,7 @@ function App() {
         setShoppingList([]);
         return;
     }
-    if (!user) return;
+    if (!user || !db) return;
     try {
         const promises = shoppingList.map(item => deleteDoc(doc(db, 'users', user.uid, 'shopping', item.id)));
         await Promise.all(promises);
@@ -387,7 +405,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white font-sans antialiased text-gray-900 relative">
-      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
+      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
       {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={() => setCurrentView(AppView.LOGIN)} />}
       {currentView === AppView.FORGOT_PASSWORD && <ForgotPasswordScreen onBack={() => setCurrentView(AppView.LOGIN)} />}
 
