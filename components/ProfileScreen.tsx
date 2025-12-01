@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, ChevronDown, ChevronUp, Package } from 'lucide-react';
+import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, ChevronDown, ChevronUp, Package, Shield } from 'lucide-react';
 import { Recipe, FamilyMember } from '../types';
 
 interface ProfileScreenProps {
@@ -14,6 +14,8 @@ interface ProfileScreenProps {
   pantryItems?: string[];
   onUpdatePantry?: (items: string[]) => void;
   recipesCount?: number;
+  isAdmin?: boolean;
+  onOpenAdmin?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
@@ -26,7 +28,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onLogout,
     pantryItems = [],
     onUpdatePantry,
-    recipesCount = 0
+    recipesCount = 0,
+    isAdmin = false,
+    onOpenAdmin
 }) => {
   // Safe destructuring with defaults to avoid crash if profile is temporarily undefined
   const { name = 'Usuário', avatar = '', dislikes: initialDislikes = '', restrictions: initialRestrictions = [] } = userProfile || {};
@@ -209,7 +213,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <ArrowLeft className="w-6 h-6 text-gray-600" />
           </button>
           <h1 className="text-lg font-bold text-gray-800">Meu Perfil</h1>
-          <div className="w-10 h-10"></div> {/* Spacer */}
+          
+          {/* Admin Button */}
+          {isAdmin && onOpenAdmin ? (
+             <button 
+                onClick={onOpenAdmin} 
+                className="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 hover:bg-emerald-200 transition-colors border border-emerald-200"
+             >
+                <Shield className="w-3 h-3" />
+                Admin
+             </button>
+          ) : (
+             <div className="w-10 h-10"></div>
+          )}
         </div>
 
         <div className="flex flex-col items-center mb-8">
