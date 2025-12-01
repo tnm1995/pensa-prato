@@ -36,7 +36,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setError(null);
     try {
       const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-      await setPersistence(auth, persistence);
       await signInWithPopup(auth, googleProvider);
       onLoginSuccess();
     } catch (err: any) {
@@ -57,7 +56,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setError(null);
     try {
       const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-      await setPersistence(auth, persistence);
 
       if (rememberMe) {
         localStorage.setItem('pensa_prato_saved_email', email);
