@@ -1,0 +1,8 @@
+{
+  "name": "Pensa Prato",
+  "description": "Smart fridge assistant that identifies ingredients from photos and suggests recipes using Gemini Vision.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
