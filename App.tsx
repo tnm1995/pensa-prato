@@ -19,6 +19,7 @@ import { ForgotPasswordScreen } from './components/ForgotPasswordScreen';
 import { ShoppingListScreen } from './components/ShoppingListScreen';
 import { auth, db, onAuthStateChanged, signOut, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc } from './services/firebase';
 import { SplashScreen } from './components/SplashScreen';
+import { AdminPanel } from './components/AdminPanel';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -40,6 +41,7 @@ function App() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Initialize Demo Mode from local storage to persist across refreshes
   const [isDemoMode, setIsDemoMode] = useState(() => {
@@ -82,6 +84,11 @@ function App() {
         if (currentUser) {
           setIsDemoMode(false);
           localStorage.removeItem('pp_demo_mode');
+          
+          // Lógica simplificada de Admin: se o email tiver 'admin' ou for um específico
+          const email = currentUser.email || '';
+          const isUserAdmin = email.includes('admin') || email === 'vitor.silva@pensaprato.com'; // Exemplo
+          setIsAdmin(isUserAdmin);
 
           if (db) {
              // FAMILY
@@ -398,7 +405,8 @@ function App() {
 
   const showBottomMenu = ![
     AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD,
-    AppView.ANALYZING, AppView.RECIPE_DETAIL, AppView.PROFILE_EDITOR
+    AppView.ANALYZING, AppView.RECIPE_DETAIL, AppView.PROFILE_EDITOR,
+    AppView.ADMIN_PANEL
   ].includes(currentView);
 
   if (isAuthChecking) return <SplashScreen />;
@@ -417,7 +425,9 @@ function App() {
       
       {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={handleAddToShoppingList} onToggleItem={handleToggleShoppingItem} onRemoveItem={handleRemoveShoppingItem} onEditItem={handleEditShoppingItem} onClearList={handleClearShoppingList} onBack={() => setCurrentView(lastMainView)} />}
       
-      {currentView === AppView.PROFILE && <ProfileScreen userProfile={safeUserProfile} pantryItems={pantryItems} onUpdatePantry={handleUpdatePantry} onSaveProfile={handleSaveMember} onBack={() => scanResult ? setCurrentView(AppView.RESULTS) : setCurrentView(AppView.UPLOAD)} favorites={favoriteRecipes} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} initialTab={profileInitialTab} onLogout={handleLogout} recipesCount={cookedHistory.length} />}
+      {currentView === AppView.PROFILE && <ProfileScreen userProfile={safeUserProfile} pantryItems={pantryItems} onUpdatePantry={handleUpdatePantry} onSaveProfile={handleSaveMember} onBack={() => scanResult ? setCurrentView(AppView.RESULTS) : setCurrentView(AppView.UPLOAD)} favorites={favoriteRecipes} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} initialTab={profileInitialTab} onLogout={handleLogout} recipesCount={cookedHistory.length} isAdmin={isAdmin} onOpenAdmin={() => setCurrentView(AppView.ADMIN_PANEL)} />}
+      
+      {currentView === AppView.ADMIN_PANEL && <AdminPanel onBack={() => setCurrentView(AppView.PROFILE)} currentUserEmail={user?.email} />}
 
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
       {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => { setImagePreview(null); setScanResult(null); setCurrentView(AppView.UPLOAD); }} />}
