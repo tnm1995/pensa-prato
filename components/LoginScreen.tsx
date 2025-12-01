@@ -35,7 +35,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
       await signInWithPopup(auth, googleProvider);
       onLoginSuccess();
     } catch (err: any) {
