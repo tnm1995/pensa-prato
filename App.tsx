@@ -85,12 +85,18 @@ function App() {
           setIsDemoMode(false);
           localStorage.removeItem('pp_demo_mode');
           
-          // Lógica simplificada de Admin: se o email tiver 'admin' ou for um específico
-          const email = currentUser.email || '';
-          const isUserAdmin = email.includes('admin') || email === 'vitor.silva@pensaprato.com'; // Exemplo
-          setIsAdmin(isUserAdmin);
-
           if (db) {
+             // CHECK ADMIN STATUS
+             const userDocRef = doc(db, 'users', currentUser.uid);
+             onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap && docSnap.exists) {
+                    const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
+                    setIsAdmin(data?.isAdmin === true);
+                } else {
+                    setIsAdmin(false);
+                }
+             }, (err) => console.warn("Admin check error", err));
+
              // FAMILY
              const familyRef = collection(db, 'users', currentUser.uid, 'family');
              onSnapshot(familyRef, (snap) => {

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { db, collection, getDoc, doc, deleteDoc } from '../services/firebase';
-import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw } from 'lucide-react';
+import { db, collection, getDoc, doc, deleteDoc, updateDoc } from '../services/firebase';
+import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
 import { FamilyMember } from '../types';
 
 interface AdminPanelProps {
@@ -11,11 +11,12 @@ interface AdminPanelProps {
 
 interface UserSummary {
   uid: string;
-  email?: string; // Auth data not always avail in firestore users collection unless synced
+  email?: string; 
   familyCount: number;
   pantryCount: number;
   historyCount: number;
   primaryName: string;
+  isAdmin: boolean;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail }) => {
@@ -29,16 +30,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
   const fetchAllUsers = async () => {
     setLoading(true);
     try {
-      // Nota: Em uma app real, listar todos os usuários requer cuidado com performance e regras de segurança.
-      // Aqui, assumimos que a coleção 'users' contém os documentos dos usuários.
       const usersRef = collection(db, 'users');
       const snapshot = await usersRef.get();
       
       const userList: UserSummary[] = [];
 
-      // Parallel fetching for sub-collections (expensive operation, handle with care in production)
       await Promise.all(snapshot.docs.map(async (userDoc: any) => {
         const uid = userDoc.id;
+        const userData = userDoc.data();
         
         // Fetch Primary Profile
         let primaryName = 'Sem Nome';
@@ -49,7 +48,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
             }
         } catch (e) {}
 
-        // Count Sub-collections (Estimativa ou fetch real)
         const familySnap = await db.collection('users').doc(uid).collection('family').get();
         const pantrySnap = await db.collection('users').doc(uid).collection('settings').doc('pantry').get();
         const historySnap = await db.collection('users').doc(uid).collection('history').get();
@@ -58,10 +56,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
 
         userList.push({
             uid,
+            email: userData.email || '',
             primaryName,
             familyCount: familySnap.size,
             pantryCount: pantryCount,
-            historyCount: historySnap.size
+            historyCount: historySnap.size,
+            isAdmin: userData.isAdmin === true
         });
       }));
 
@@ -87,6 +87,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
         } catch (e) {
             console.error(e);
             alert('Erro ao apagar.');
+        }
+    }
+  };
+
+  const handleToggleAdmin = async (uid: string, currentStatus: boolean) => {
+    if (confirm(currentStatus ? 'Remover privilégio de Admin?' : 'Tornar este usuário um Admin?')) {
+        try {
+            await updateDoc(doc(db, 'users', uid), { isAdmin: !currentStatus });
+            setUsers(users.map(u => u.uid === uid ? { ...u, isAdmin: !currentStatus } : u));
+        } catch(e) {
+            console.error(e);
+            alert('Erro ao atualizar permissão.');
         }
     }
   };
@@ -120,7 +132,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
 
   const filteredUsers = users.filter(u => 
     u.uid.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.primaryName.toLowerCase().includes(searchTerm.toLowerCase())
+    u.primaryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (viewMode === 'detail' && selectedUser) {
@@ -255,10 +268,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                 <table className="w-full text-left text-sm text-gray-600">
                     <thead className="bg-gray-50 text-xs uppercase font-bold text-gray-400">
                         <tr>
-                            <th className="px-6 py-4">Usuário / UID</th>
+                            <th className="px-6 py-4">Usuário / Email</th>
+                            <th className="px-6 py-4 text-center">Permissão</th>
                             <th className="px-6 py-4 text-center">Família</th>
                             <th className="px-6 py-4 text-center">Despensa</th>
-                            <th className="px-6 py-4 text-center">Histórico</th>
                             <th className="px-6 py-4 text-right">Ações</th>
                         </tr>
                     </thead>
@@ -269,7 +282,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                             <tr key={user.uid} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4">
                                     <p className="font-bold text-gray-900">{user.primaryName}</p>
+                                    {user.email && <p className="text-xs text-emerald-600 font-medium">{user.email}</p>}
                                     <p className="text-xs font-mono text-gray-400 truncate max-w-[150px]" title={user.uid}>{user.uid}</p>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                    <button 
+                                        onClick={() => handleToggleAdmin(user.uid, user.isAdmin)}
+                                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${user.isAdmin ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                        title={user.isAdmin ? 'Remover Admin' : 'Tornar Admin'}
+                                    >
+                                        {user.isAdmin ? <Shield className="w-3 h-3" /> : null}
+                                        {user.isAdmin ? 'ADMIN' : 'USER'}
+                                    </button>
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -279,11 +303,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                                 <td className="px-6 py-4 text-center">
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                                         {user.pantryCount}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                        {user.historyCount}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right">

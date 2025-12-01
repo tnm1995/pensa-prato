@@ -68,6 +68,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
                 if (attempts === 0) await new Promise(r => setTimeout(r, 500));
 
                 if (db) {
+                    // Create Root User Doc to store admin flag/metadata
+                    await setDoc(doc(db, 'users', user.uid), {
+                        email: email,
+                        createdAt: new Date(),
+                        isAdmin: false // Default to false
+                    }, { merge: true });
+
                     // Perfil Principal
                     await setDoc(doc(db, 'users', user.uid, 'family', 'primary'), {
                         id: 'primary',
