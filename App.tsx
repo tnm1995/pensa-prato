@@ -1,7 +1,5 @@
-<change>
-    <file>App.tsx</file>
-    <description>Explicitly disable admin privileges in Demo Mode by ensuring isAdmin is false in props and preventing Admin Panel access.</description>
-    <content><![CDATA[import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { AppView, FamilyMember, CookingMethod, ShoppingItem, Recipe, ScanResult } from './types';
 import { analyzeFridgeImage, generateRecipes, getMockScanResult, getMockRecipes } from './services/geminiService';
 import { UploadScreen } from './components/UploadScreen';
@@ -91,12 +89,13 @@ function App() {
              // CHECK ADMIN STATUS
              const userDocRef = doc(db, 'users', currentUser.uid);
              onSnapshot(userDocRef, (docSnap) => {
+                let adminStatus = false;
                 if (docSnap && docSnap.exists) {
                     const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
-                    setIsAdmin(data?.isAdmin === true);
-                } else {
-                    setIsAdmin(false);
+                    adminStatus = data?.isAdmin === true;
                 }
+                setIsAdmin(adminStatus);
+                console.log("Admin Status:", adminStatus);
              }, (err) => console.warn("Admin check error", err));
 
              // FAMILY
@@ -433,7 +432,7 @@ function App() {
       
       {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={handleAddToShoppingList} onToggleItem={handleToggleShoppingItem} onRemoveItem={handleRemoveShoppingItem} onEditItem={handleEditShoppingItem} onClearList={handleClearShoppingList} onBack={() => setCurrentView(lastMainView)} />}
       
-      {currentView === AppView.PROFILE && <ProfileScreen userProfile={safeUserProfile} pantryItems={pantryItems} onUpdatePantry={handleUpdatePantry} onSaveProfile={handleSaveMember} onBack={() => scanResult ? setCurrentView(AppView.RESULTS) : setCurrentView(AppView.UPLOAD)} favorites={favoriteRecipes} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} initialTab={profileInitialTab} onLogout={handleLogout} recipesCount={cookedHistory.length} isAdmin={isAdmin && !isDemoMode} onOpenAdmin={() => setCurrentView(AppView.ADMIN_PANEL)} />}
+      {currentView === AppView.PROFILE && <ProfileScreen userProfile={safeUserProfile} pantryItems={pantryItems} onUpdatePantry={handleUpdatePantry} onSaveProfile={handleSaveMember} onBack={() => scanResult ? setCurrentView(AppView.RESULTS) : setCurrentView(AppView.UPLOAD)} favorites={favoriteRecipes} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} initialTab={profileInitialTab} onLogout={handleLogout} recipesCount={cookedHistory.length} isAdmin={isAdmin} onOpenAdmin={() => setCurrentView(AppView.ADMIN_PANEL)} />}
       
       {currentView === AppView.ADMIN_PANEL && !isDemoMode && <AdminPanel onBack={() => setCurrentView(AppView.PROFILE)} currentUserEmail={user?.email} />}
 
@@ -447,5 +446,4 @@ function App() {
   );
 }
 
-export default App;]]></content>
-</change>
+export default App;

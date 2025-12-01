@@ -214,11 +214,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </button>
           <h1 className="text-lg font-bold text-gray-800">Meu Perfil</h1>
           
-          {/* Admin Button */}
+          {/* Admin Button (Header) */}
           {isAdmin && onOpenAdmin ? (
              <button 
                 onClick={onOpenAdmin} 
-                className="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 hover:bg-emerald-200 transition-colors border border-emerald-200"
+                className="bg-purple-100 text-purple-800 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 hover:bg-purple-200 transition-colors border border-purple-200"
              >
                 <Shield className="w-3 h-3" />
                 Admin
@@ -387,6 +387,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </div>
             </div>
 
+            {/* Help Button */}
             <div className="bg-white rounded-[1.5rem] shadow-sm border border-gray-100 overflow-hidden">
                     <button className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors text-left">
                     <div className="flex items-center gap-4">
@@ -396,10 +397,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <ChevronRight className="w-5 h-5 text-gray-300" />
                 </button>
             </div>
+            
+            {/* PROMINENT ADMIN BUTTON IN LIST */}
+            {isAdmin && onOpenAdmin && (
+                <button 
+                    onClick={onOpenAdmin}
+                    className="w-full bg-purple-50 text-purple-700 border-2 border-purple-100 font-bold p-4 rounded-[1.5rem] flex items-center justify-between hover:bg-purple-100 transition-colors shadow-sm group"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-purple-200 rounded-xl text-purple-700 shadow-sm"><Shield className="w-6 h-6" /></div>
+                        <div className="text-left">
+                            <span className="block font-bold text-lg">Painel Administrativo</span>
+                            <span className="block text-xs font-medium opacity-70">Gerenciar usuários e dados</span>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-purple-400 group-hover:text-purple-600 transition-colors" />
+                </button>
+            )}
 
             <button 
                 onClick={onLogout}
-                className="w-full bg-red-50 text-red-600 border border-red-100 font-bold p-5 rounded-[1.5rem] flex items-center justify-center gap-2 hover:bg-red-100 transition-colors mt-6 shadow-sm"
+                className="w-full bg-red-50 text-red-600 border border-red-100 font-bold p-5 rounded-[1.5rem] flex items-center justify-center gap-2 hover:bg-red-100 transition-colors mt-2 shadow-sm"
             >
                 <LogOut className="w-5 h-5" />
                 Sair do App
