@@ -185,3 +185,4 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     </div>
   );
 };
+// commit forçado pra Vercel atualizar
