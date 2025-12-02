@@ -89,14 +89,14 @@ export const getMockRecipes = (): Recipe[] => ([
     used_ingredients: ["250g de macarrão", "3 ovos", "150g de bacon", "50g de queijo parmesão", "1/2 caixa de creme de leite"],
     missing_ingredients: ["pimenta do reino a gosto"],
     instructions: [
-      "Primeiro, coloque bastante água com sal para ferver em uma panela grande. Quando ferver, adicione o macarrão e cozinhe por cerca de **10 minutos**.",
-      "Enquanto a água esquenta, corte os **150g de bacon** em cubos pequenos.",
-      "Em uma frigideira, frite o bacon em fogo médio por cerca de **8 minutos** até ficar bem douradinho e crocante. Não precisa por óleo, ele solta a própria gordura.",
-      "Em uma tigela separada, misture as **3 gemas**, a **1/2 caixa de creme de leite** e os **50g de queijo parmesão** ralado até virar um creme amarelinho.",
-      "Quando o macarrão estiver cozido, escorra a água (mas guarde um pouquinho da água do cozimento).",
-      "Desligue o fogo do bacon. Misture o macarrão na frigideira do bacon.",
-      "ATENÇÃO: Com o fogo desligado, despeje a mistura de ovos sobre o macarrão quente e mexa rápido para ficar cremoso e não virar ovo mexido.",
-      "Sirva imediatamente bem quentinho!"
+      "Passo 1: Primeiro, coloque bastante água com sal para ferver em uma panela grande. Quando ferver, adicione os **250g de macarrão** e cozinhe por cerca de **10 minutos**.",
+      "Passo 2: Enquanto a água esquenta, corte os **150g de bacon** em cubos pequenos.",
+      "Passo 3: Em uma frigideira, frite o bacon em fogo médio por cerca de **8 minutos** até ficar bem douradinho e crocante. Não precisa por óleo.",
+      "Passo 4: Em uma tigela separada, misture as **3 gemas**, a **1/2 caixa de creme de leite** e os **50g de queijo parmesão** ralado até virar um creme amarelinho.",
+      "Passo 5: Quando o macarrão estiver cozido, escorra a água (mas guarde um pouquinho da água do cozimento).",
+      "Passo 6: Desligue o fogo do bacon. Misture o macarrão na frigideira do bacon.",
+      "Passo 7: ATENÇÃO: Com o fogo desligado, despeje a mistura de ovos e queijo sobre o macarrão quente e mexa rápido para ficar cremoso.",
+      "Passo 8: Sirva imediatamente bem quentinho!"
     ],
     tags: ["massa", "rápida", "conforto"],
     timers: [
@@ -112,13 +112,13 @@ export const getMockRecipes = (): Recipe[] => ([
     used_ingredients: ["2 ovos", "30g de queijo parmesão", "1 fatia de bacon picado", "1/4 de cebola picada", "1 dente de alho"],
     missing_ingredients: ["salsinha picada"],
     instructions: [
-      "Quebre os **2 ovos** em uma tigela e bata com um garfo por **1 minuto** até misturar bem a clara e a gema. Coloque uma pitada de sal.",
-      "Pique a cebola, o alho e o bacon em pedaços bem pequenos.",
-      "Aqueça uma frigideira antiaderente. Refogue o bacon, a cebola e o alho por **3 minutos** até a cebola ficar transparente.",
-      "Despeje os ovos batidos na frigideira, espalhando por todo o fundo.",
-      "Abaixe o fogo e deixe cozinhar por **4 minutos**. Quando a borda estiver soltando, jogue o queijo por cima.",
-      "Com cuidado, dobre a omelete ao meio (formando uma meia lua) e deixe dourar mais um pouquinho.",
-      "Sirva em seguida."
+      "Passo 1: Quebre os **2 ovos** em uma tigela e bata com um garfo por **1 minuto** até misturar bem.",
+      "Passo 2: Pique a **1/4 de cebola**, o dente de alho e a fatia de bacon em pedaços bem pequenos.",
+      "Passo 3: Aqueça uma frigideira antiaderente. Refogue o bacon, a cebola e o alho por **3 minutos** até a cebola ficar transparente.",
+      "Passo 4: Despeje os ovos batidos na frigideira, espalhando por todo o fundo.",
+      "Passo 5: Abaixe o fogo e deixe cozinhar por **4 minutos**. Quando a borda estiver soltando, jogue os **30g de queijo** por cima.",
+      "Passo 6: Com cuidado, dobre a omelete ao meio (formando uma meia lua) e deixe dourar mais um pouquinho.",
+      "Passo 7: Sirva em seguida."
     ],
     tags: ["café da manhã", "low carb", "rápida"],
     timers: [
@@ -320,7 +320,10 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
   3. EXPLIQUE O "PORQUÊ": Ensine enquanto guia.
      -> DIGA: "Não mexa agora para não soltar água e a carne não ficar dura."
   4. SEGURANÇA: Avise sobre óleo espirrando, vapor quente ao abrir forno/panela, cuidado com facas.
-  5. DETALHE QUANTIDADES: Repita as quantidades no texto se ajudar. Ex: "Adicione a xícara de leite que separamos".
+  5. DETALHE QUANTIDADES NO TEXTO: ISSO É OBRIGATÓRIO. 
+     -> NÃO DIGA: "Adicione o leite." 
+     -> DIGA: "Adicione os **200ml de leite**."
+     O usuário não deve ter que subir a tela para lembrar a quantidade.
 
   ESTRUTURA DA RESPOSTA:
   - Título atraente e honesto.
@@ -338,8 +341,8 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
         "used_ingredients": ["500g de carne moída", "3 batatas"], 
         "missing_ingredients": ["1 sachê de molho de tomate"],
         "instructions": [
-            "Passo 1 (Preparação): Comece descascando as batatas. Corte-as em cubos de cerca de 2cm (tamanho de um dado). Isso ajuda a cozinhar por igual.", 
-            "Passo 2 (Refogar): Aqueça uma panela média em fogo alto com um fio de óleo. Quando estiver quente, coloque a carne moída. Dica: Não mexa imediatamente! Deixe fritar por 1 minuto para criar uma crostinha saborosa no fundo."
+            "Passo 1 (Preparação): Comece descascando as **3 batatas**. Corte-as em cubos de cerca de 2cm (tamanho de um dado). Isso ajuda a cozinhar por igual.", 
+            "Passo 2 (Refogar): Aqueça uma panela média em fogo alto com um fio de óleo. Quando estiver quente, coloque os **500g de carne moída**. Dica: Não mexa imediatamente! Deixe fritar por 1 minuto para criar uma crostinha saborosa no fundo."
         ],
         "tags": ["almoço", "carne", "dia a dia"]
       }
@@ -451,7 +454,9 @@ export const generateRecipesByCategory = async (category: string, activeProfiles
     REGRAS DE DIDÁTICA (IMPORTANTE):
     1. EXPLIQUE CADA PASSO: Assuma que o usuário nunca cozinhou antes. Explique termos como "untar", "banho-maria" ou "ponto de bico".
     2. DETALHES VISUAIS: "Bata até dobrar de volume e ficar esbranquiçado".
-    3. INGREDIENTES COMPLETOS: Liste todos os ingredientes necessários como "used_ingredients". Deixe "missing_ingredients" vazio para este modo.
+    3. QUANTIDADES NO TEXTO (MUITO IMPORTANTE): Sempre repita a quantidade do ingrediente no passo a passo. 
+       -> "Misture o item A" (ERRADO). 
+       -> "Misture as **2 xícaras de item A**" (CORRETO).
     4. ORGANIZAÇÃO: Instruções numeradas e em ordem cronológica lógica.
     5. EXPLIQUE O PORQUÊ: "Faça isso para evitar que a massa sole", "Isso ajuda a dar crocância".
     
@@ -465,7 +470,7 @@ export const generateRecipesByCategory = async (category: string, activeProfiles
           "servings": 4,
           "used_ingredients": ["500g de item A", "2 latas de item B"], 
           "missing_ingredients": [], 
-          "instructions": ["Passo 1 (Mise en place): Separe todos os ingredientes...", "Passo 2: Misture o item A com B suavemente para não perder o ar da massa..."],
+          "instructions": ["Passo 1 (Mise en place): Separe todos os ingredientes...", "Passo 2: Misture as **2 latas de item B** com os **500g de item A** suavemente para não perder o ar da massa..."],
           "tags": ["${category}", "típico", "forno"]
         }
       ]
