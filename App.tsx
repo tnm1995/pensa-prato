@@ -61,6 +61,9 @@ function App() {
   const isDemoModeRef = useRef(isDemoMode);
   useEffect(() => { isDemoModeRef.current = isDemoMode; }, [isDemoMode]);
 
+  // Flag to prevent snapshot listeners from redirecting during logout process
+  const isLoggingOut = useRef(false);
+
   const [loadingMode, setLoadingMode] = useState<'analyzing' | 'recipes'>('analyzing');
   
   // Track if it's the initial auth check (F5/Load) to enforce Welcome screen only then
@@ -108,6 +111,8 @@ function App() {
                  
                  // Use snapshot listener for admin status AND cpf check to be reactive
                  onSnapshot(userDocRef, (docSnap: any) => {
+                    if (isLoggingOut.current) return; // Prevent redirect if logging out
+
                     let adminStatus = false;
                     let hasDoc = docSnap && docSnap.exists;
                     let hasCpf = false;
@@ -151,26 +156,36 @@ function App() {
                  // FAMILY
                  const familyRef = collection(db, 'users', currentUser.uid, 'family');
                  onSnapshot(familyRef, (snap: any) => {
+                   if (isLoggingOut.current) return;
                    const data = safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember));
                    setFamilyMembers(data);
                  }, (err: any) => console.warn("Family sync error (ignoring):", err));
 
                  // FAVORITES
                  const favRef = collection(db, 'users', currentUser.uid, 'favorites');
-                 onSnapshot(favRef, (s: any) => setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe))), (err: any) => console.warn("Fav sync error (ignoring):", err));
+                 onSnapshot(favRef, (s: any) => {
+                    if (isLoggingOut.current) return;
+                    setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe)))
+                 }, (err: any) => console.warn("Fav sync error (ignoring):", err));
 
                  // HISTORY
                  const historyRef = collection(db, 'users', currentUser.uid, 'history');
-                 onSnapshot(historyRef, (s: any) => setCookedHistory(safeMapDocs(s, d => d.data() as Recipe)), (err: any) => console.warn("History sync error (ignoring):", err));
+                 onSnapshot(historyRef, (s: any) => {
+                     if (isLoggingOut.current) return;
+                     setCookedHistory(safeMapDocs(s, d => d.data() as Recipe))
+                 }, (err: any) => console.warn("History sync error (ignoring):", err));
 
                  // SHOPPING
                  const shoppingRef = collection(db, 'users', currentUser.uid, 'shopping');
-                 onSnapshot(shoppingRef, (s: any) => setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem))), (err: any) => console.warn("Shopping sync error (ignoring):", err));
+                 onSnapshot(shoppingRef, (s: any) => {
+                     if (isLoggingOut.current) return;
+                     setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem)))
+                 }, (err: any) => console.warn("Shopping sync error (ignoring):", err));
 
                  // PANTRY
                  const pantryRef = doc(db, 'users', currentUser.uid, 'settings', 'pantry');
                  onSnapshot(pantryRef, (s: any) => {
-                     if (!s) return;
+                     if (isLoggingOut.current || !s) return;
                      const exists = typeof s.exists === 'function' ? s.exists() : s.exists;
                      const data = typeof s.data === 'function' ? s.data() : s.data;
                      setPantryItems(exists && data ? data.items || [] : []);
@@ -247,6 +262,7 @@ function App() {
   }, [activeProfiles, user]);
 
   const handleLogout = async () => {
+      isLoggingOut.current = true;
       try {
           // 1. Clear Local Data
           localStorage.removeItem('pp_demo_mode');
@@ -272,6 +288,9 @@ function App() {
           // Failsafe: force login view anyway
           setCurrentView(AppView.LOGIN);
           setUser(null);
+      } finally {
+          // Reset flag after delay to ensure auth state has settled
+          setTimeout(() => { isLoggingOut.current = false; }, 1000);
       }
   };
   
@@ -478,7 +497,7 @@ function App() {
   return (
     <div className="min-h-screen bg-white font-sans antialiased text-gray-900 relative">
       {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {/* Navigation handled by onSnapshot */}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
-      {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={() => setCurrentView(AppView.LOGIN)} />}
+      {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={handleLogout} />}
       {currentView === AppView.FORGOT_PASSWORD && <ForgotPasswordScreen onBack={() => setCurrentView(AppView.LOGIN)} />}
       {currentView === AppView.COMPLETE_PROFILE && user && <CompleteProfileScreen onCompleteSuccess={() => setCurrentView(AppView.WELCOME)} initialName={user.displayName} initialEmail={user.email} onBack={handleLogout} />}
 

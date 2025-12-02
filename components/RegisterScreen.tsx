@@ -135,6 +135,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
 
     } catch (err: any) {
       console.error(err);
+      
+      // Clean up ghost session if auth succeeded but something else failed
+      if (auth.currentUser) {
+          try {
+             auth.signOut();
+          } catch (soErr) { console.error("Error signing out ghost user", soErr); }
+      }
+
       if (err.code === 'auth/email-already-in-use') {
         setError("Este e-mail já está cadastrado.");
       } else if (err.code === 'auth/invalid-api-key') {
