@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, googleProvider, signInWithPopup, signInWithEmailAndPassword } from '../services/firebase';
+import { auth, googleProvider, signInWithPopup, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from '../services/firebase';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, CheckSquare, Square } from 'lucide-react';
 import { Logo } from './Logo';
 
@@ -9,10 +9,10 @@ interface LoginScreenProps {
   onNavigateToForgotPassword: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({
-  onLoginSuccess,
-  onNavigateToRegister,
-  onNavigateToForgotPassword
+export const LoginScreen: React.FC<LoginScreenProps> = ({ 
+  onLoginSuccess, 
+  onNavigateToRegister, 
+  onNavigateToForgotPassword 
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +21,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Carregar e-mail salvo
+  // Carregar e-mail salvo se existir
   useEffect(() => {
     const savedEmail = localStorage.getItem('pensa_prato_saved_email');
     if (savedEmail) {
@@ -31,14 +31,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   }, []);
 
   const handleGoogleLogin = async () => {
+    // Check for protocol issues (common cause of 'operation-not-supported')
+    if (window.location.protocol === 'file:') {
+        setError("O login com Google não funciona em arquivos locais (file://). Use um servidor local ou faça deploy.");
+        return;
+    }
+
     setLoading(true);
     setError(null);
     try {
+      const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+      await setPersistence(auth, persistence);
       await signInWithPopup(auth, googleProvider);
+      setLoading(false); // Clean up loading state before navigating
       onLoginSuccess();
     } catch (err: any) {
       console.error("Erro no login com Google:", err);
-      setError("Erro ao conectar com o Google. Tente novamente.");
+      
+      if (err.code === 'auth/operation-not-supported-in-this-environment') {
+         setError("Ambiente não suportado. Verifique se você está usando HTTP/HTTPS e se os cookies estão habilitados.");
+      } else if (err.code === 'auth/unauthorized-domain') {
+         setError("Domínio não autorizado. Adicione este domínio no Firebase Console (Authentication > Settings > Authorized Domains).");
+      } else if (err.code === 'auth/popup-closed-by-user') {
+         setError("O login foi cancelado.");
+      } else {
+         setError("Erro ao conectar com o Google. Tente novamente.");
+      }
+      
       setLoading(false);
     }
   };
@@ -49,9 +68,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       setError("Preencha e-mail e senha.");
       return;
     }
+
     setLoading(true);
     setError(null);
     try {
+      const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+      await setPersistence(auth, persistence);
+
       if (rememberMe) {
         localStorage.setItem('pensa_prato_saved_email', email);
       } else {
@@ -59,6 +82,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       }
 
       await signInWithEmailAndPassword(auth, email, password);
+      setLoading(false); // Clean up loading state before navigating
       onLoginSuccess();
     } catch (err: any) {
       console.error("Erro no login:", err);
@@ -92,6 +116,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </p>
         </div>
 
+        {/* Google */}
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
@@ -123,6 +148,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Mail className="absolute left-4 top-4 w-5 h-5 text-gray-400 group-focus-within:text-[#00C853]" />
             <input
               type="email"
+              name="email"
+              autoComplete="email"
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -135,6 +162,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Lock className="absolute left-4 top-4 w-5 h-5 text-gray-400 group-focus-within:text-[#00C853]" />
             <input
               type={showPassword ? "text" : "password"}
+              name="password"
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -156,7 +185,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </button>
           </div>
 
-          {error && <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-2xl border border-red-100">{error}</div>}
+          {error && <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-2xl border border-red-100 animate-in slide-in-from-top-2">{error}</div>}
 
           <button
             type="submit"
