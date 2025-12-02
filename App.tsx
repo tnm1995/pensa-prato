@@ -86,6 +86,12 @@ function App() {
         if (currentUser) {
           setIsDemoMode(false);
           localStorage.removeItem('pp_demo_mode');
+
+          // FAILSAFE: If user is logged in but stuck on a guest screen, force redirect to Welcome
+          // This fixes the "Infinite Processing" issue if the login component callback fails
+          if ([AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD].includes(viewRef.current)) {
+              setCurrentView(AppView.WELCOME);
+          }
           
           if (db) {
              // 1. Check if user needs to complete profile (CPF Check)
@@ -109,22 +115,24 @@ function App() {
                     }
                 } else {
                     // Document doesn't exist yet (very first moment after creation)
-                    // Usually handled by Register/Complete screens, but safeguard:
-                    // Only redirect if NOT already in Register
-                    if (currentView !== AppView.REGISTER && currentView !== AppView.COMPLETE_PROFILE) {
-                        // Wait a bit? Or do nothing?
-                    }
+                    // Usually handled by Register/Complete screens
                 }
 
                 setIsAdmin(adminStatus);
-             }, (err) => console.warn("User doc check error", err));
+             }, (err) => {
+                 console.warn("Admin/Profile check error (likely permissions):", err);
+                 // If permission error, we assume NOT admin. 
+                 // We also cannot verify CPF, so we let them proceed to Welcome (fallback)
+                 if ([AppView.LOGIN, AppView.REGISTER].includes(viewRef.current)) {
+                    setCurrentView(AppView.WELCOME);
+                 }
+             });
 
              // FAMILY
              const familyRef = collection(db, 'users', currentUser.uid, 'family');
              onSnapshot(familyRef, (snap) => {
                const data = safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember));
                if (data.length === 0) {
-                 // Dont auto-create here, leave it to register/complete logic to avoid race conditions
                  setFamilyMembers([]);
                } else {
                  setFamilyMembers(data);
@@ -153,15 +161,6 @@ function App() {
              }, (err) => console.warn("Pantry sync error", err));
           }
 
-          // Initial Auth Check Logic for routing
-          if (isInitialAuthCheck.current) {
-              // We need to double check the CPF asynchronously if onSnapshot hasn't fired yet
-              // But onSnapshot should be fast enough.
-              // We default to Welcome, but the onSnapshot above will redirect to COMPLETE_PROFILE if needed.
-              // To be safe, we don't set Welcome if we suspect a new user.
-              // We'll let the onSnapshot handle the final decision if user is logged in.
-              if (currentView === AppView.LOGIN) setCurrentView(AppView.WELCOME);
-          }
         } else {
           // Access the ref value to avoid dependency loop
           if (isDemoModeRef.current) {
