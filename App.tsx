@@ -16,9 +16,10 @@ import { LoginScreen } from './components/LoginScreen';
 import { RegisterScreen } from './components/RegisterScreen';
 import { ForgotPasswordScreen } from './components/ForgotPasswordScreen';
 import { ShoppingListScreen } from './components/ShoppingListScreen';
-import { auth, db, onAuthStateChanged, signOut, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc } from './services/firebase';
+import { auth, db, onAuthStateChanged, signOut, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, getDoc } from './services/firebase';
 import { SplashScreen } from './components/SplashScreen';
 import { AdminPanel } from './components/AdminPanel';
+import { CompleteProfileScreen } from './components/CompleteProfileScreen';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -41,10 +42,8 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Admin State
+  // Admin State - Controlled strictly by DB
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminOverride, setAdminOverride] = useState(false);
-  const effectiveIsAdmin = isAdmin || adminOverride;
   
   // Initialize Demo Mode from local storage to persist across refreshes
   const [isDemoMode, setIsDemoMode] = useState(() => {
@@ -80,7 +79,7 @@ function App() {
 
   // FIREBASE AUTH + SYNC
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
       try {
         setUser(currentUser);
 
@@ -89,33 +88,44 @@ function App() {
           localStorage.removeItem('pp_demo_mode');
           
           if (db) {
-             // CHECK ADMIN STATUS
+             // 1. Check if user needs to complete profile (CPF Check)
              const userDocRef = doc(db, 'users', currentUser.uid);
+             
+             // Use snapshot listener for admin status AND cpf check to be reactive
              onSnapshot(userDocRef, (docSnap) => {
                 let adminStatus = false;
+                
                 if (docSnap && docSnap.exists) {
                     const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
-                    adminStatus = data?.isAdmin === true;
+                    
+                    if (data?.isAdmin === true) adminStatus = true;
+
+                    // CHECK CPF: If missing, force Complete Profile
+                    if (!data?.cpf) {
+                        setCurrentView(AppView.COMPLETE_PROFILE);
+                    } else if (currentView === AppView.COMPLETE_PROFILE) {
+                        // If we were in complete profile and now we have CPF, go to Welcome
+                        setCurrentView(AppView.WELCOME);
+                    }
+                } else {
+                    // Document doesn't exist yet (very first moment after creation)
+                    // Usually handled by Register/Complete screens, but safeguard:
+                    // Only redirect if NOT already in Register
+                    if (currentView !== AppView.REGISTER && currentView !== AppView.COMPLETE_PROFILE) {
+                        // Wait a bit? Or do nothing?
+                    }
                 }
+
                 setIsAdmin(adminStatus);
-             }, (err) => console.warn("Admin check error", err));
+             }, (err) => console.warn("User doc check error", err));
 
              // FAMILY
              const familyRef = collection(db, 'users', currentUser.uid, 'family');
              onSnapshot(familyRef, (snap) => {
                const data = safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember));
                if (data.length === 0) {
-                 const primary: FamilyMember = {
-                   id: 'primary',
-                   name: currentUser.displayName?.split(' ')[0] || 'Você',
-                   avatar: currentUser.photoURL || 'Chef', 
-                   dislikes: '',
-                   restrictions: [],
-                   isChild: false
-                 };
-                 // We don't await here to avoid blocking, just fire and forget
-                 setDoc(doc(db, 'users', currentUser.uid, 'family', 'primary'), primary).catch(console.warn);
-                 setFamilyMembers([primary]);
+                 // Dont auto-create here, leave it to register/complete logic to avoid race conditions
+                 setFamilyMembers([]);
                } else {
                  setFamilyMembers(data);
                }
@@ -136,8 +146,6 @@ function App() {
              // PANTRY
              const pantryRef = doc(db, 'users', currentUser.uid, 'settings', 'pantry');
              onSnapshot(pantryRef, (s) => {
-                 // CRITICAL FIX: Handle both modular SDK (function) and compat SDK (property)
-                 // Also check if s is valid
                  if (!s) return;
                  const exists = typeof s.exists === 'function' ? s.exists() : s.exists;
                  const data = typeof s.data === 'function' ? s.data() : s.data;
@@ -145,14 +153,18 @@ function App() {
              }, (err) => console.warn("Pantry sync error", err));
           }
 
-          // Always reset to Welcome Screen on load (F5) only if it's the initial check
+          // Initial Auth Check Logic for routing
           if (isInitialAuthCheck.current) {
-              setCurrentView(AppView.WELCOME);
+              // We need to double check the CPF asynchronously if onSnapshot hasn't fired yet
+              // But onSnapshot should be fast enough.
+              // We default to Welcome, but the onSnapshot above will redirect to COMPLETE_PROFILE if needed.
+              // To be safe, we don't set Welcome if we suspect a new user.
+              // We'll let the onSnapshot handle the final decision if user is logged in.
+              if (currentView === AppView.LOGIN) setCurrentView(AppView.WELCOME);
           }
         } else {
           // Access the ref value to avoid dependency loop
           if (isDemoModeRef.current) {
-               // If refreshing in demo mode, go to Welcome instead of Login
                if (isInitialAuthCheck.current) {
                    setCurrentView(AppView.WELCOME);
                }
@@ -162,7 +174,6 @@ function App() {
         }
       } catch (err) {
         console.error("Auth initialization error:", err);
-        // Fallback in case of error
         setCurrentView(AppView.LOGIN);
       } finally {
         if (isInitialAuthCheck.current) {
@@ -173,7 +184,7 @@ function App() {
     });
 
     return unsubscribe;
-  }, []); // Empty dependency array to prevent re-subscriptions loops
+  }, []); // Empty dependency array
 
   // ACTIVE PROFILES PERSISTENCE
   useEffect(() => {
@@ -198,7 +209,6 @@ function App() {
     if (activeProfiles.length > 0 && familyMembers.length > 0) {
         setActiveProfiles(prev => {
             const updated = prev.map(p => familyMembers.find(m => m.id === p.id)).filter(Boolean) as FamilyMember[];
-            // Simple check to avoid loop
             if (prev.length !== updated.length) return updated;
             return prev;
         });
@@ -217,7 +227,6 @@ function App() {
 
   const handleLogout = () => {
       localStorage.removeItem('pp_demo_mode');
-      setAdminOverride(false);
       signOut(auth);
   };
   
@@ -414,7 +423,7 @@ function App() {
   const safeUserProfile = familyMembers.find(m => m.id === 'primary') || familyMembers[0];
 
   const showBottomMenu = ![
-    AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD,
+    AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE,
     AppView.ANALYZING, AppView.RECIPE_DETAIL, AppView.PROFILE_EDITOR,
     AppView.ADMIN_PANEL
   ].includes(currentView);
@@ -423,9 +432,10 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white font-sans antialiased text-gray-900 relative">
-      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
+      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => { /* Navigation handled by auth listener */ }} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
       {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={() => setCurrentView(AppView.LOGIN)} />}
       {currentView === AppView.FORGOT_PASSWORD && <ForgotPasswordScreen onBack={() => setCurrentView(AppView.LOGIN)} />}
+      {currentView === AppView.COMPLETE_PROFILE && user && <CompleteProfileScreen onCompleteSuccess={() => setCurrentView(AppView.WELCOME)} initialName={user.displayName} initialEmail={user.email} />}
 
       {currentView === AppView.WELCOME && <WelcomeScreen onSelectAny={() => { setActiveProfiles([]); setCurrentView(AppView.COOKING_METHOD); }} onSelectFamily={() => setCurrentView(AppView.FAMILY_SELECTION)} />}
       {currentView === AppView.FAMILY_SELECTION && <FamilySelectionScreen members={familyMembers} selectedMembers={activeProfiles} onToggleMember={m => setActiveProfiles(p => p.some(x => x.id === m.id) ? p.filter(x => x.id !== m.id) : [...p, m])} onSelectAll={() => setActiveProfiles(activeProfiles.length === familyMembers.length ? [] : [...familyMembers])} onContinue={() => setCurrentView(AppView.COOKING_METHOD)} onEditMember={m => { setMemberToEdit(m); setEditingReturnView(AppView.FAMILY_SELECTION); setCurrentView(AppView.PROFILE_EDITOR); }} onAddNew={() => { setMemberToEdit(undefined); setCurrentView(AppView.PROFILE_EDITOR); }} onBack={() => setCurrentView(AppView.WELCOME)} />}
@@ -447,9 +457,8 @@ function App() {
             initialTab={profileInitialTab} 
             onLogout={handleLogout} 
             recipesCount={cookedHistory.length} 
-            isAdmin={effectiveIsAdmin && !isDemoMode} 
+            isAdmin={isAdmin && !isDemoMode} 
             onOpenAdmin={() => setCurrentView(AppView.ADMIN_PANEL)}
-            onEnableAdminDebug={() => setAdminOverride(true)}
         />
       )}
       

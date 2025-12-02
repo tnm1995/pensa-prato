@@ -1,4 +1,5 @@
 
+
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
@@ -68,6 +69,7 @@ export const collection = (dbOrRef: any, ...paths: string[]) => traverse(dbOrRef
 export const doc = (dbOrRef: any, ...paths: string[]) => traverse(dbOrRef, paths);
 
 export const getDoc = (ref: any) => ref.get();
+export const getDocs = (queryOrRef: any) => queryOrRef.get(); // Added getDocs
 export const setDoc = (ref: any, data: any, opts?: any) => ref.set(data, opts);
 export const addDoc = (ref: any, data: any) => ref.add(data);
 export const updateDoc = (ref: any, data: any) => ref.update(data);

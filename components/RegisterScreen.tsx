@@ -1,7 +1,8 @@
 
+
 import React, { useState } from 'react';
 import { User, Mail, Lock, FileText, ChevronLeft, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { auth, db, createUserWithEmailAndPassword, updateProfile, doc, setDoc } from '../services/firebase';
+import { auth, db, createUserWithEmailAndPassword, updateProfile, doc, setDoc, collection, query, where, getDocs } from '../services/firebase';
 import { validateCPF, formatCPF } from '../utils/cpf';
 import { Logo } from './Logo';
 
@@ -52,6 +53,18 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
 
     setLoading(true);
     try {
+      // 0. VERIFICAR CPF DUPLICADO
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('cpf', '==', cpf));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+          setError("Este CPF já está sendo utilizado por outra conta.");
+          setCpfError(true);
+          setLoading(false);
+          return;
+      }
+
       // 1. Criar usuário no Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -68,9 +81,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
                 if (attempts === 0) await new Promise(r => setTimeout(r, 500));
 
                 if (db) {
-                    // Create Root User Doc to store admin flag/metadata
+                    // Create Root User Doc to store admin flag/metadata AND CPF
                     await setDoc(doc(db, 'users', user.uid), {
                         email: email,
+                        cpf: cpf, // Salva o CPF no root para verificação futura
                         createdAt: new Date(),
                         isAdmin: false // Default to false
                     }, { merge: true });
