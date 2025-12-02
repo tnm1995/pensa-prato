@@ -556,6 +556,14 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         <div className="relative z-10 mt-auto">
             <div className="flex gap-2 mb-3">
                 <span className="bg-emerald-800/50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-500/30 backdrop-blur-md">{recipe.difficulty}</span>
+                
+                {recipe.rating && (
+                    <span className="bg-emerald-800/50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-500/30 backdrop-blur-md flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                        {recipe.rating}
+                    </span>
+                )}
+
                 {cookingMethod && cookingMethod !== CookingMethod.ANY && (
                     <span className="bg-emerald-800/50 px-2 py-0.5 rounded text-[10px] font-bold uppercase flex gap-1 items-center border border-emerald-500/30 backdrop-blur-md">{getMethodIcon()} {cookingMethod}</span>
                 )}

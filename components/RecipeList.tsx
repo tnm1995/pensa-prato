@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Recipe, CookingMethod } from '../types';
-import { Clock, Users, Flame, ArrowLeft, ShoppingBasket, ChevronRight, Heart, CheckCircle2, Wind, ChefHat, UtensilsCrossed, Sparkles } from 'lucide-react';
+import { Clock, Users, Flame, ArrowLeft, ShoppingBasket, ChevronRight, Heart, CheckCircle2, Wind, ChefHat, UtensilsCrossed, Sparkles, Star } from 'lucide-react';
 
 interface RecipeListProps {
   recipes: Recipe[];
@@ -90,6 +90,12 @@ export const RecipeList: React.FC<RecipeListProps> = ({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 mb-4">
+                    {recipe.rating && (
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-100">
+                            <Star className="w-3.5 h-3.5 fill-current" />
+                            {recipe.rating}
+                        </div>
+                    )}
                     <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">
                         <Clock className="w-3.5 h-3.5 text-emerald-600" />
                         {recipe.time_minutes} min
