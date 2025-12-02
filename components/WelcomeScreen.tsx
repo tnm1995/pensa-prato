@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Home, Utensils, Users } from 'lucide-react';
 
@@ -66,7 +65,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectAny, onSel
         </div>
 
         <div className="text-center mt-auto pt-8 pb-4">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Geladeira Cheia • IA Inteligente</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pensa Prato • IA Inteligente</p>
         </div>
       </div>
     </div>
