@@ -77,91 +77,100 @@ function App() {
     return [];
   };
 
+  // FAILSAFE TIMEOUT: Ensure Splash Screen disappears even if Firebase hangs
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        if (isAuthChecking) {
+            console.warn("Auth check timed out. Forcing UI load.");
+            setIsAuthChecking(false);
+            if (!user && !isDemoMode) {
+                setCurrentView(AppView.LOGIN);
+            }
+        }
+    }, 2500); // 2.5 seconds timeout
+    return () => clearTimeout(timer);
+  }, [isAuthChecking, user, isDemoMode]);
+
+  // FORCE NAVIGATION FAILSAFE: If user exists but view is stuck on Login/Register, force Welcome
+  useEffect(() => {
+    if (user && [AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD].includes(currentView)) {
+        console.log("Forcing navigation to WELCOME due to active session");
+        setCurrentView(AppView.WELCOME);
+    }
+  }, [user, currentView]);
+
   // FIREBASE AUTH + SYNC
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
       try {
-        setUser(currentUser);
-
         if (currentUser) {
+          // Only update user if it's a login event (avoid redundant updates)
+          setUser(currentUser);
           setIsDemoMode(false);
           localStorage.removeItem('pp_demo_mode');
-
-          // FAILSAFE: If user is logged in but stuck on a guest screen, force redirect to Welcome
-          // This fixes the "Infinite Processing" issue if the login component callback fails
-          if ([AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD].includes(viewRef.current)) {
-              setCurrentView(AppView.WELCOME);
-          }
           
           if (db) {
-             // 1. Check if user needs to complete profile (CPF Check)
-             const userDocRef = doc(db, 'users', currentUser.uid);
-             
-             // Use snapshot listener for admin status AND cpf check to be reactive
-             onSnapshot(userDocRef, (docSnap) => {
-                let adminStatus = false;
-                
-                if (docSnap && docSnap.exists) {
-                    const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
+             try {
+                 // 1. Check if user needs to complete profile (CPF Check)
+                 const userDocRef = doc(db, 'users', currentUser.uid);
+                 
+                 // Use snapshot listener for admin status AND cpf check to be reactive
+                 onSnapshot(userDocRef, (docSnap: any) => {
+                    let adminStatus = false;
                     
-                    if (data?.isAdmin === true) adminStatus = true;
+                    if (docSnap && docSnap.exists) {
+                        const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
+                        if (data?.isAdmin === true) adminStatus = true;
 
-                    // CHECK CPF: If missing, force Complete Profile
-                    if (!data?.cpf) {
-                        setCurrentView(AppView.COMPLETE_PROFILE);
-                    } else if (currentView === AppView.COMPLETE_PROFILE) {
-                        // If we were in complete profile and now we have CPF, go to Welcome
-                        setCurrentView(AppView.WELCOME);
+                        // CHECK CPF: If missing, force Complete Profile
+                        if (!data?.cpf) {
+                            setCurrentView(AppView.COMPLETE_PROFILE);
+                        } else if (currentView === AppView.COMPLETE_PROFILE) {
+                            setCurrentView(AppView.WELCOME);
+                        }
                     }
-                } else {
-                    // Document doesn't exist yet (very first moment after creation)
-                    // Usually handled by Register/Complete screens
-                }
+                    setIsAdmin(adminStatus);
+                 }, (err: any) => {
+                     // Permission denied expected if rules not set. Treat as non-admin.
+                     console.warn("User/Admin check error:", err);
+                 });
 
-                setIsAdmin(adminStatus);
-             }, (err) => {
-                 console.warn("Admin/Profile check error (likely permissions):", err);
-                 // If permission error, we assume NOT admin. 
-                 // We also cannot verify CPF, so we let them proceed to Welcome (fallback)
-                 if ([AppView.LOGIN, AppView.REGISTER].includes(viewRef.current)) {
-                    setCurrentView(AppView.WELCOME);
-                 }
-             });
+                 // FAMILY
+                 const familyRef = collection(db, 'users', currentUser.uid, 'family');
+                 onSnapshot(familyRef, (snap: any) => {
+                   const data = safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember));
+                   setFamilyMembers(data);
+                 }, (err: any) => console.warn("Family sync error (ignoring):", err));
 
-             // FAMILY
-             const familyRef = collection(db, 'users', currentUser.uid, 'family');
-             onSnapshot(familyRef, (snap) => {
-               const data = safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember));
-               if (data.length === 0) {
-                 setFamilyMembers([]);
-               } else {
-                 setFamilyMembers(data);
-               }
-             }, (err) => console.warn("Family sync error", err));
+                 // FAVORITES
+                 const favRef = collection(db, 'users', currentUser.uid, 'favorites');
+                 onSnapshot(favRef, (s: any) => setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe))), (err: any) => console.warn("Fav sync error (ignoring):", err));
 
-             // FAVORITES
-             const favRef = collection(db, 'users', currentUser.uid, 'favorites');
-             onSnapshot(favRef, s => setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe))), (err) => console.warn("Fav sync error", err));
+                 // HISTORY
+                 const historyRef = collection(db, 'users', currentUser.uid, 'history');
+                 onSnapshot(historyRef, (s: any) => setCookedHistory(safeMapDocs(s, d => d.data() as Recipe)), (err: any) => console.warn("History sync error (ignoring):", err));
 
-             // HISTORY
-             const historyRef = collection(db, 'users', currentUser.uid, 'history');
-             onSnapshot(historyRef, s => setCookedHistory(safeMapDocs(s, d => d.data() as Recipe)), (err) => console.warn("History sync error", err));
+                 // SHOPPING
+                 const shoppingRef = collection(db, 'users', currentUser.uid, 'shopping');
+                 onSnapshot(shoppingRef, (s: any) => setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem))), (err: any) => console.warn("Shopping sync error (ignoring):", err));
 
-             // SHOPPING
-             const shoppingRef = collection(db, 'users', currentUser.uid, 'shopping');
-             onSnapshot(shoppingRef, s => setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem))), (err) => console.warn("Shopping sync error", err));
-
-             // PANTRY
-             const pantryRef = doc(db, 'users', currentUser.uid, 'settings', 'pantry');
-             onSnapshot(pantryRef, (s) => {
-                 if (!s) return;
-                 const exists = typeof s.exists === 'function' ? s.exists() : s.exists;
-                 const data = typeof s.data === 'function' ? s.data() : s.data;
-                 setPantryItems(exists && data ? data.items || [] : []);
-             }, (err) => console.warn("Pantry sync error", err));
+                 // PANTRY
+                 const pantryRef = doc(db, 'users', currentUser.uid, 'settings', 'pantry');
+                 onSnapshot(pantryRef, (s: any) => {
+                     if (!s) return;
+                     const exists = typeof s.exists === 'function' ? s.exists() : s.exists;
+                     const data = typeof s.data === 'function' ? s.data() : s.data;
+                     setPantryItems(exists && data ? data.items || [] : []);
+                 }, (err: any) => console.warn("Pantry sync error (ignoring):", err));
+             } catch (syncError) {
+                 console.warn("Sync setup error:", syncError);
+             }
           }
 
         } else {
+          // User is logged out
+          setUser(null);
+          
           // Access the ref value to avoid dependency loop
           if (isDemoModeRef.current) {
                if (isInitialAuthCheck.current) {
@@ -224,9 +233,33 @@ function App() {
     }
   }, [activeProfiles, user]);
 
-  const handleLogout = () => {
-      localStorage.removeItem('pp_demo_mode');
-      signOut(auth);
+  const handleLogout = async () => {
+      try {
+          // 1. Clear Local Data
+          localStorage.removeItem('pp_demo_mode');
+          if (user?.uid) {
+              localStorage.removeItem(`active_profiles_${user.uid}`);
+          }
+
+          // 2. Reset App State immediately (Optimistic Update)
+          setIsDemoMode(false);
+          setUser(null); 
+          setActiveProfiles([]);
+          setIsAdmin(false);
+          setScanResult(null);
+          setRecipes([]);
+          
+          // 3. Force Navigation immediately
+          setCurrentView(AppView.LOGIN);
+          
+          // 4. Perform Firebase SignOut
+          await signOut(auth);
+      } catch (error) {
+          console.error("Logout failed", error);
+          // Failsafe: force login view anyway
+          setCurrentView(AppView.LOGIN);
+          setUser(null);
+      }
   };
   
   const handleUpdatePantry = async (items: string[]) => {
