@@ -1,10 +1,11 @@
 
+
 import { Recipe } from '../types';
 
 export const seasonalRecipesData: Record<string, Recipe[]> = {
   'Natal': [
     {
-      title: "Peru de Natal Clássico",
+      title: "Peru de Natal Clássico (Passo a Passo)",
       time_minutes: 240,
       difficulty: "Difícil",
       servings: 10,
@@ -22,12 +23,13 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       ],
       missing_ingredients: [],
       instructions: [
-        "Descongele o peru na geladeira por 48 horas antes do preparo.",
-        "Prepare a marinada: bata no liquidificador o vinho, cebola, alho, ervas, sal e pimenta.",
-        "Coloque o peru em um saco plástico culinário ou tigela grande com a marinada. Deixe na geladeira por **12 horas**, virando na metade do tempo.",
-        "Retire da marinada, seque levemente com papel toalha e pincele a **manteiga derretida** por toda a pele (isso garante o dourado).",
-        "Cubra com papel alumínio e asse em forno pré-aquecido a 200°C por cerca de **2 horas**.",
-        "Retire o papel alumínio, regue com o caldo da assadeira e asse por mais **1 hora e meia** ou até o termômetro pular/ficar bem dourado."
+        "Passo 1 (Planejamento): O peru demora para descongelar. Deixe-o na parte de baixo da geladeira por cerca de 48 horas antes do preparo. Mantenha na embalagem para não vazar.",
+        "Passo 2 (Marinada): No liquidificador, bata o vinho branco, a cebola descascada, os dentes de alho, as ervas, o sal e a pimenta até formar um líquido homogêneo e aromático.",
+        "Passo 3 (Tempero): Coloque o peru (sem os miúdos que vêm dentro) em um saco plástico culinário grande ou em uma bacia funda. Despeje a marinada sobre ele, garantindo que pegue em tudo. Deixe na geladeira por **12 horas**, virando na metade do tempo.",
+        "Passo 4 (Preparando para assar): Retire o peru da marinada e seque a pele levemente com papel toalha (isso ajuda a ficar crocante). Pincele a **manteiga derretida** por toda a pele, caprichando no peito e nas coxas.",
+        "Passo 5 (Forno): Pré-aqueça o forno a 200°C por 15 minutos. Cubra a assadeira do peru com papel alumínio (lado brilhante para dentro) vedando bem as laterais. Asse por cerca de **2 horas**.",
+        "Passo 6 (Dourar): Retire o papel alumínio com cuidado (sai vapor quente!). Regue o peru com o caldo que formou no fundo da assadeira. Volte ao forno por mais **1 hora e meia** ou até o pino do termômetro (se tiver) pular, ou até a pele ficar bem dourada e a carne macia.",
+        "Passo 7: Deixe descansar por 20 minutos antes de cortar para a carne ficar suculenta."
       ],
       tags: ["Natal", "Clássico", "Ave", "Forno"]
     },
@@ -51,11 +53,12 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       ],
       missing_ingredients: [],
       instructions: [
-        "Em uma tigela grande, misture o frango desfiado, a cenoura ralada, o milho, a maçã e as passas.",
-        "Tempere com sal, pimenta e o suco de limão.",
-        "Adicione a maionese e o creme de leite. Misture bem até ficar bem cremoso.",
-        "Leve à geladeira por pelo menos **1 hora** antes de servir.",
-        "Na hora de servir, cubra com **bastante batata palha** para manter a crocância."
+        "Passo 1 (Preparação): Cozinhe o peito de frango apenas em água e sal até ficar bem macio. Espere esfriar e desfie bem fininho com um garfo ou na batedeira.",
+        "Passo 2 (Mistura Seca): Em uma tigela bem grande, coloque o frango desfiado, a cenoura ralada (ralo grosso), o milho escorrido, a maçã picadinha (sem semente) e as passas.",
+        "Passo 3 (Tempero): Tempere essa mistura com sal, pimenta do reino a gosto e o suco de limão. O limão ajuda a dar sabor e impede a maçã de escurecer.",
+        "Passo 4 (Cremosidade): Adicione o pote inteiro de maionese e a caixinha de creme de leite. Misture muito bem com uma colher grande até tudo ficar envolvido pelo creme.",
+        "Passo 5 (Geladeira): O salpicão fica melhor gelado. Cubra e leve à geladeira por pelo menos **1 hora** antes de servir.",
+        "Passo 6 (Finalização): Só coloque a **batata palha** por cima na hora exata de servir, para ela não murchar e continuar crocante."
       ],
       tags: ["Natal", "Frio", "Acompanhamento"]
     },
@@ -78,45 +81,45 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       ],
       missing_ingredients: [],
       instructions: [
-        "Em uma panela grande, derreta a manteiga e frite o bacon e a calabresa até dourarem.",
-        "Adicione a cebola e refogue até ficar transparente.",
-        "Acrescente a farinha de mandioca aos poucos, mexendo sempre para não queimar.",
-        "Deixe a farinha torrar levemente na gordura das carnes por **5 minutos**.",
-        "Desligue o fogo e misture os ovos cozidos, as azeitonas e a salsinha fresca.",
-        "Acerte o sal se necessário."
+        "Passo 1: Corte o bacon e a calabresa em cubinhos pequenos. Pique também a cebola.",
+        "Passo 2: Em uma panela grande, derreta a manteiga em fogo médio. Adicione o bacon e a calabresa e frite mexendo de vez em quando até ficarem dourados.",
+        "Passo 3: Adicione a cebola picada na mesma panela e refogue até ela ficar transparente e macia (uns 3 minutos).",
+        "Passo 4: Abaixe o fogo. Vá adicionando a farinha de mandioca aos poucos, mexendo sem parar para não queimar o fundo. Deixe a farinha 'torrar' nessa gordura por uns **5 minutos** para ficar crocante.",
+        "Passo 5: Desligue o fogo. Misture delicadamente os ovos cozidos picados, as azeitonas e a salsinha fresca picada.",
+        "Passo 6: Prove um pouquinho (cuidado que está quente) e veja se precisa de sal. Sirva em uma travessa bonita."
       ],
       tags: ["Natal", "Acompanhamento", "Brasileira"]
     },
     {
-      title: "Rabanada de Forno",
+      title: "Rabanada de Forno (Sem Fritura)",
       time_minutes: 40,
       difficulty: "Fácil",
       servings: 10,
       rating: 4.7,
       image: "https://vovopalmirinha.com.br/wp-content/uploads/2020/02/rabanada-forno.jpg",
       used_ingredients: [
-        "4 pães franceses amanhecidos",
+        "4 pães franceses amanhecidos (duriinhos)",
         "2 xícaras de leite",
         "1 lata de leite condensado",
-        "3 ovos batidos",
+        "3 ovos",
         "Açúcar e canela para polvilhar",
-        "Manteiga para untar"
+        "Manteiga para untar a forma"
       ],
       missing_ingredients: [],
       instructions: [
-        "Corte os pães em fatias grossas (aprox 2cm).",
-        "Em uma tigela, misture o leite e o leite condensado. Em outra, bata os ovos.",
-        "Passe as fatias de pão na mistura de leite (rapidamente para não desmanchar) e depois nos ovos.",
-        "Coloque em uma assadeira untada com bastante manteiga.",
-        "Leve ao forno médio (180°C) por **20 minutos**, vire as fatias e asse por mais **10 minutos** até dourar.",
-        "Passe na mistura de açúcar com canela ainda quentes."
+        "Passo 1: Corte os pães em fatias grossas (cerca de 2 dedos de largura). Se cortar muito fino, elas desmancham.",
+        "Passo 2: Pegue duas tigelas. Na primeira, misture o leite e o leite condensado até dissolver bem. Na segunda, bata os 3 ovos com um garfo até misturar clara e gema.",
+        "Passo 3: Unte uma assadeira grande com bastante manteiga.",
+        "Passo 4: Pegue uma fatia de pão, mergulhe rapidamente no leite (não deixe encharcar demais senão quebra), depois passe nos ovos batidos e coloque na assadeira. Repita com todos.",
+        "Passo 5: Leve ao forno médio (180°C) por cerca de **15 a 20 minutos**. Abra o forno, vire as rabanadas com uma espátula e deixe dourar o outro lado por mais **10 minutos**.",
+        "Passo 6: Tire do forno e, enquanto ainda estão quentes, passe cada uma em um prato com açúcar e canela misturados."
       ],
       tags: ["Natal", "Sobremesa", "Econômica"]
     }
   ],
   'Festa Junina': [
     {
-      title: "Bolo de Fubá Cremoso",
+      title: "Bolo de Fubá Cremoso de Liquidificador",
       time_minutes: 55,
       difficulty: "Fácil",
       servings: 12,
@@ -129,42 +132,41 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
         "2 xícaras de fubá",
         "2 colheres (sopa) de manteiga",
         "100g de queijo parmesão ralado",
-        "1 colher (sopa) de fermento"
+        "1 colher (sopa) de fermento em pó"
       ],
       missing_ingredients: [],
       instructions: [
-        "Bata tudo no liquidificador, exceto o fermento, até ficar homogêneo.",
-        "Adicione o fermento e misture delicadamente (a massa fica bem líquida mesmo).",
-        "Despeje em uma forma untada e enfarinhada com fubá.",
-        "Leve ao forno médio (180°C) por cerca de **40 a 50 minutos**.",
-        "O bolo fica com uma camada cremosa no meio parecida com pudim. Espere esfriar para cortar."
+        "Passo 1: Pré-aqueça o forno a 180°C. Unte uma forma retangular média com manteiga e polvilhe um pouco de fubá nela toda.",
+        "Passo 2: No liquidificador, coloque os ovos, o leite, o açúcar, o fubá, a manteiga e o queijo parmesão. Bata bem por uns 3 minutos até ficar tudo misturado.",
+        "Passo 3: Adicione o fermento por último e misture delicadamente com uma colher ou use a função 'pulsar' do liquidificador apenas duas vezes. A massa fica bem líquida mesmo, parece água, não se assuste!",
+        "Passo 4: Despeje na forma com cuidado e leve ao forno por cerca de **40 a 50 minutos**.",
+        "Passo 5: O bolo estará pronto quando estiver dourado em cima. Ele fica com o centro meio mole (cremoso) mesmo. Espere esfriar completamente para cortar, senão ele desmancha."
       ],
       tags: ["Festa Junina", "Bolo", "Lanche"]
     },
     {
-      title: "Canjica Branca Tradicional",
+      title: "Canjica Branca Cremosa",
       time_minutes: 60,
       difficulty: "Médio",
       servings: 10,
       rating: 4.9,
       image: "https://static.itdg.com.br/images/1200-675/d87178c52089c16928e4695574514300/314227-original.jpg",
       used_ingredients: [
-        "500g de canjica branca",
+        "500g de canjica branca (milho para canjica)",
         "1 lata de leite condensado",
         "1 litro de leite",
         "5 cravos da índia",
         "1 pau de canela",
         "200ml de leite de coco",
-        "Canela em pó para polvilhar",
-        "Amendoim torrado moído (opcional)"
+        "Canela em pó para polvilhar"
       ],
       missing_ingredients: [],
       instructions: [
-        "Deixe a canjica de molho em água por 12 horas.",
-        "Escorra e cozinhe na panela de pressão com água nova por **30 minutos**.",
-        "Após cozida, adicione o leite, leite condensado, leite de coco, cravos e canela em pau.",
-        "Deixe ferver em fogo baixo, mexendo de vez em quando, até o caldo engrossar bem (aprox. **20 min**).",
-        "Sirva quente polvilhada com canela em pó ou amendoim."
+        "Passo 1 (De molho): Coloque a canjica em uma tigela grande, cubra com bastante água e deixe descansar de um dia para o outro (ou pelo menos 12 horas). Isso amacia o grão.",
+        "Passo 2 (Cozimento): Escorra a água do molho. Coloque a canjica na panela de pressão e cubra com água nova (uns 4 dedos acima do milho). Cozinhe por **30 a 40 minutos** após pegar pressão.",
+        "Passo 3: Abra a panela com cuidado (tire a pressão antes). Se o milho estiver molinho, adicione o leite, o leite condensado, o leite de coco, os cravos e a canela em pau.",
+        "Passo 4 (Apurar): Deixe ferver em fogo baixo, com a panela destampada, mexendo de vez em quando para não grudar no fundo. Cozinhe por mais uns **20 minutos** até o caldo ficar grosso e cremoso.",
+        "Passo 5: Sirva quente em potinhos e polvilhe canela em pó por cima."
       ],
       tags: ["Festa Junina", "Sobremesa", "Quente"]
     },
@@ -178,51 +180,51 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       used_ingredients: [
         "1kg de batata descascada",
         "2 linguiças calabresas em rodelas",
-        "1 maço de couve manteiga fatiada fina",
+        "1 maço de couve manteiga fatiada bem fina",
         "1 cebola picada",
-        "2 dentes de alho",
-        "Azeite e sal"
+        "2 dentes de alho amassados",
+        "Azeite e sal a gosto"
       ],
       missing_ingredients: [],
       instructions: [
-        "Cozinhe as batatas até desmancharem. Bata no liquidificador com a própria água do cozimento.",
-        "Em uma panela grande, frite a calabresa no azeite. Reserve algumas rodelas para decorar.",
-        "Na mesma gordura, refogue a cebola e o alho.",
-        "Adicione o creme de batata e deixe ferver. Acerte o sal.",
-        "Desligue o fogo e adicione a couve fatiada (ela cozinha no calor residual para ficar verdinha).",
-        "Sirva com fio de azeite."
+        "Passo 1: Descasque as batatas e cozinhe em água até ficarem bem moles, quase desmanchando. Não jogue a água fora!",
+        "Passo 2: Bata as batatas no liquidificador junto com a água do cozimento até virar um creme liso. Reserve.",
+        "Passo 3: Em uma panela grande, coloque um fio de azeite e frite as rodelas de calabresa até dourarem. Adicione a cebola e o alho e refogue junto por 2 minutos.",
+        "Passo 4: Despeje o creme de batata na panela com a calabresa. Misture bem e deixe ferver. Prove o sal e ajuste se precisar.",
+        "Passo 5: Quando estiver fervendo, desligue o fogo. Adicione a couve fatiada e misture. O calor do caldo cozinha a couve na medida certa para ela ficar verdinha.",
+        "Passo 6: Sirva quente com um fio de azeite por cima."
       ],
       tags: ["Festa Junina", "Sopa", "Inverno"]
     },
     {
-      title: "Pamonha de Forno",
+      title: "Pamonha de Forno (Sem palha)",
       time_minutes: 60,
       difficulty: "Fácil",
       servings: 8,
       rating: 4.6,
       image: "https://claudia.abril.com.br/wp-content/uploads/2020/02/receita-pamonha-de-forno.jpg",
       used_ingredients: [
-        "2 latas de milho verde (sem água)",
+        "2 latas de milho verde (escorra a água)",
         "1 garrafa de leite de coco (200ml)",
         "2 xícaras de açúcar",
         "4 ovos",
-        "1/2 xícara de queijo parmesão",
-        "1 colher (sopa) de fermento"
+        "1/2 xícara de queijo parmesão ralado",
+        "1 colher (sopa) de fermento em pó"
       ],
       missing_ingredients: [],
       instructions: [
-        "Bata no liquidificador o milho, o leite de coco, os ovos e o açúcar por **3 minutos**.",
-        "Adicione o queijo e o fermento e bata rapidamente apenas para misturar.",
-        "Despeje em uma forma untada e enfarinhada.",
-        "Asse em forno pré-aquecido a 180°C por **45 a 50 minutos** até dourar bem.",
-        "Corte em quadrados e sirva morno."
+        "Passo 1: Pré-aqueça o forno a 180°C. Unte uma forma média com manteiga e farinha.",
+        "Passo 2: No liquidificador, coloque o milho (sem a água da lata), o leite de coco, os ovos e o açúcar. Bata bem por uns **3 a 4 minutos** até o milho ficar bem triturado.",
+        "Passo 3: Adicione o queijo parmesão e o fermento. Bata rapidinho (só aperte o botão pulsar) apenas para misturar.",
+        "Passo 4: Despeje na forma e leve ao forno por cerca de **45 a 50 minutos**.",
+        "Passo 5: A pamonha estará pronta quando estiver dourada por cima e firme. Espere amornar para cortar em quadrados."
       ],
       tags: ["Festa Junina", "Milho", "Lanche"]
     }
   ],
   'Páscoa': [
     {
-      title: "Bacalhau à Gomes de Sá",
+      title: "Bacalhau à Gomes de Sá Simples",
       time_minutes: 60,
       difficulty: "Médio",
       servings: 6,
@@ -232,19 +234,19 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
         "500g de bacalhau dessalgado em lascas",
         "500g de batatas cozidas em rodelas",
         "3 ovos cozidos em rodelas",
-        "2 cebolas em rodelas",
+        "2 cebolas cortadas em rodelas",
         "1/2 xícara de azeite extra virgem",
         "Azeitonas pretas",
         "Salsinha picada"
       ],
       missing_ingredients: [],
       instructions: [
-        "Afervente as lascas de bacalhau por 10 minutos. Escorra.",
-        "Em uma frigideira funda, refogue a cebola no azeite até murchar bem.",
-        "Adicione o bacalhau e as batatas cozidas à cebola e misture delicadamente.",
-        "Transfira para um refratário.",
-        "Leve ao forno por **15 minutos** apenas para aquecer bem.",
-        "Decore com os ovos cozidos, azeitonas pretas e muita salsinha. Regue com mais azeite."
+        "Passo 1: Coloque água numa panela e, quando ferver, jogue as lascas de bacalhau. Deixe ferver por 10 minutos. Escorra e reserve.",
+        "Passo 2: Na mesma água (que pegou gosto), cozinhe as batatas em rodelas até ficarem macias (mas não desmanchando). Escorra.",
+        "Passo 3: Em uma frigideira grande e funda, coloque metade do azeite e refogue as rodelas de cebola até ficarem transparentes.",
+        "Passo 4: Adicione o bacalhau e as batatas na frigideira com a cebola. Misture com cuidado para não quebrar as batatas.",
+        "Passo 5: Passe tudo para um refratário bonito que possa ir ao forno. Leve ao forno por **15 minutos** apenas para esquentar bem.",
+        "Passo 6: Retire do forno. Decore com os ovos cozidos em rodelas, as azeitonas e bastante salsinha picada. Regue com o resto do azeite antes de servir."
       ],
       tags: ["Páscoa", "Peixe", "Clássico"]
     },
@@ -256,26 +258,25 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       rating: 4.9,
       image: "https://www.receiteria.com.br/wp-content/uploads/ovo-de-pascoa-na-travessa-13.jpg",
       used_ingredients: [
-        "2 latas de leite condensado",
-        "2 caixas de creme de leite",
+        "3 latas de leite condensado (total)",
+        "3 caixas de creme de leite (total)",
         "4 colheres (sopa) de chocolate em pó",
         "1 colher (sopa) de manteiga",
         "200g de chocolate meio amargo picado",
-        "Granulado ou raspas de chocolate",
-        "Bombons picados ou uvas (opcional)"
+        "Raspas de chocolate para decorar"
       ],
       missing_ingredients: [],
       instructions: [
-        "Faça um brigadeiro mole: leve ao fogo 1 leite condensado, 1 creme de leite, o chocolate em pó e a manteiga. Mexa até desgrudar levemente do fundo.",
-        "Faça um creme branco: leve ao fogo 1 leite condensado, 1 creme de leite e mexa até engrossar.",
-        "Derreta o chocolate meio amargo e misture com o creme branco (ganache).",
-        "Na travessa, monte camadas: brigadeiro escuro, bombons ou uvas (se usar), e finalize com a ganache de chocolate.",
-        "Decore com raspas de chocolate e leve à geladeira."
+        "Passo 1 (Creme Escuro): Em uma panela, coloque 1 leite condensado, 1 creme de leite, o chocolate em pó e a manteiga. Mexa em fogo médio até virar um brigadeiro mole (desgrudando levemente do fundo). Despeje no fundo de uma travessa.",
+        "Passo 2 (Creme Branco): Em outra panela limpa, coloque 1 leite condensado e 1 creme de leite. Mexa em fogo médio até engrossar (ponto de brigadeiro mole). Despeje com cuidado por cima do creme escuro na travessa.",
+        "Passo 3 (Ganache): Derreta o chocolate meio amargo no microondas (de 30 em 30 segundos, mexendo sempre). Misture com 1 caixinha de creme de leite até ficar um creme liso e brilhante.",
+        "Passo 4: Espalhe essa ganache por cima do creme branco.",
+        "Passo 5: Decore com raspas de chocolate e leve à geladeira por pelo menos 2 horas antes de servir."
       ],
       tags: ["Páscoa", "Sobremesa", "Chocolate"]
     },
     {
-      title: "Colomba Pascal Fácil",
+      title: "Colomba Pascal (Massa Fácil)",
       time_minutes: 90,
       difficulty: "Médio",
       servings: 8,
@@ -283,24 +284,21 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       image: "https://www.sabornamesa.com.br/media/k2/items/cache/0904d13e33464a4b49467657d2948c26_XL.jpg",
       used_ingredients: [
         "500g de farinha de trigo",
-        "10g de fermento biológico seco",
-        "100g de manteiga",
+        "10g de fermento biológico seco (para pão)",
+        "100g de manteiga em temperatura ambiente",
         "3 gemas",
         "1/2 xícara de açúcar",
         "1 xícara de água morna",
-        "Essência de laranja ou baunilha",
-        "Gotas de chocolate ou frutas cristalizadas",
-        "Cobertura de açúcar (opcional)"
+        "Gotas de chocolate ou frutas cristalizadas"
       ],
       missing_ingredients: [],
       instructions: [
-        "Misture o fermento com um pouco de farinha e água morna. Deixe espumar por 15 min.",
-        "Na batedeira (gancho) ou tigela, misture o restante da farinha, açúcar, manteiga, gemas e a essência.",
-        "Adicione a mistura de fermento e sove bem até ficar elástica.",
-        "Incorpore as gotas de chocolate ou frutas.",
-        "Deixe descansar coberto por **1 hora** (até dobrar).",
-        "Coloque em forma de papel própria para colomba ou assadeira.",
-        "Asse a 180°C por **35 a 40 minutos**."
+        "Passo 1 (Esponja): Em uma tigela, misture o fermento, meia xícara de farinha e a água morna. Cubra com um pano e deixe descansar por 15 minutos até espumar.",
+        "Passo 2: Na mesma tigela, adicione o resto da farinha, o açúcar, a manteiga e as gemas. Misture bem com as mãos e sove a massa por uns 10 minutos até ficar lisa e elástica.",
+        "Passo 3: Misture as gotas de chocolate ou frutas na massa.",
+        "Passo 4: Coloque a massa em uma forma de papel própria para Colomba (vende em lojas de festa) ou em uma forma redonda untada.",
+        "Passo 5: Cubra com um pano e deixe descansar em lugar morno por **1 hora** (ela vai dobrar de tamanho).",
+        "Passo 6: Leve ao forno pré-aquecido a 180°C por cerca de **35 a 40 minutos** até ficar dourada."
       ],
       tags: ["Páscoa", "Pão", "Doce"]
     }
@@ -314,23 +312,22 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       rating: 4.8,
       image: "https://i.pinimg.com/originals/93/29/4f/93294f9996d914569426f04c06236b28.jpg",
       used_ingredients: [
-        "1.5kg de lombo de porco inteiro",
-        "1 abacaxi em rodelas",
-        "1 xícara de vinho branco",
-        "4 colheres (sopa) de açúcar mascavo (ou mel)",
+        "1.5kg de lombo de porco inteiro (peça única)",
+        "1 abacaxi cortado em meias rodelas",
+        "1 xícara de vinho branco (ou suco de abacaxi)",
+        "4 colheres (sopa) de mel ou açúcar mascavo",
         "3 dentes de alho amassados",
         "Suco de 1 limão",
-        "Sal e alecrim"
+        "Sal e alecrim a gosto"
       ],
       missing_ingredients: [],
       instructions: [
-        "Tempere o lombo com alho, limão, vinho, sal e alecrim. Deixe marinar por 4 horas.",
-        "Faça cortes profundos no lombo (fatias que não vão até o fim) e insira meias rodelas de abacaxi nos cortes.",
-        "Coloque em uma assadeira com a marinada. Cubra com papel alumínio.",
-        "Asse a 200°C por **1 hora e 15 minutos**.",
-        "Retire o papel, pincele o açúcar mascavo ou mel por cima.",
-        "Volte ao forno alto para dourar/caramelizar por mais **20 minutos**.",
-        "Sirva decorado com o restante do abacaxi."
+        "Passo 1 (Tempero): Em uma tigela, misture o vinho, o limão, o alho, o sal e o alecrim. Coloque o lombo nessa mistura e deixe marinar na geladeira por 4 horas para pegar gosto.",
+        "Passo 2: Coloque o lombo em uma assadeira. Com uma faca afiada, faça cortes profundos na carne (como se fosse fatiar, mas sem separar as fatias até o fim).",
+        "Passo 3: Em cada corte desse, encaixe uma meia rodela de abacaxi.",
+        "Passo 4: Regue com a marinada, cubra com papel alumínio e leve ao forno (200°C) por **1 hora e 15 minutos**.",
+        "Passo 5: Tire o papel alumínio. Pincele o mel (ou açúcar) por cima da carne.",
+        "Passo 6: Volte ao forno (agora sem papel) por mais **20 a 30 minutos** até a carne ficar dourada e caramelizada."
       ],
       tags: ["Ano Novo", "Carne", "Agridoce"]
     },
@@ -347,20 +344,20 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
         "2 cebolas grandes cortadas em rodelas",
         "3 colheres (sopa) de azeite",
         "Sal a gosto",
-        "Água fervente"
+        "4 xícaras de água fervente"
       ],
       missing_ingredients: [],
       instructions: [
-        "Cozinhe a lentilha em água por 10 minutos (ela deve ficar al dente, não desmanchando). Escorra.",
-        "Em uma panela, refogue o arroz no azeite com sal.",
-        "Adicione a lentilha pré-cozida ao arroz e cubra com água fervente (aprox. 4 xícaras). Cozinhe até secar.",
-        "Enquanto isso, em uma frigideira, frite as cebolas no azeite em fogo baixo até ficarem bem escuras e caramelizadas (cebola queimadinha).",
-        "Quando o arroz estiver pronto, misture metade da cebola e coloque o restante por cima para decorar."
+        "Passo 1: Coloque a lentilha em uma panela com água e cozinhe por 10 minutos. Ela tem que ficar 'al dente' (meio durinha ainda), não pode desmanchar. Escorra a água e reserve a lentilha.",
+        "Passo 2 (Cebola Caramelizada): Em uma frigideira, aqueça o azeite e frite as rodelas de cebola em fogo médio/baixo, mexendo sempre, até elas ficarem bem marrons e docinhas. Reserve metade para decorar.",
+        "Passo 3: Na panela do arroz, coloque a outra metade da cebola frita e refogue o arroz cru junto. Adicione a lentilha pré-cozida.",
+        "Passo 4: Jogue a água fervente e o sal. Deixe cozinhar com a panela semi-tampada até a água secar e o arroz ficar macio.",
+        "Passo 5: Solte o arroz com um garfo, coloque numa travessa e jogue o restante da cebola frita por cima para decorar."
       ],
       tags: ["Ano Novo", "Acompanhamento", "Sorte"]
     },
     {
-      title: "Pudim de Leite Condensado",
+      title: "Pudim de Leite Condensado (Sem Erro)",
       time_minutes: 90,
       difficulty: "Médio",
       servings: 10,
@@ -368,18 +365,18 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       image: "https://images.unsplash.com/photo-1590069006232-a544b6765d75?q=80&w=1000&auto=format&fit=crop",
       used_ingredients: [
         "1 lata de leite condensado",
-        "2 latas de leite (use a lata de leite condensado como medida)",
+        "2 latas de leite (use a lata de leite condensado vazia para medir)",
         "3 ovos inteiros",
         "1 xícara de açúcar (para a calda)"
       ],
       missing_ingredients: [],
       instructions: [
-        "Calda: Derreta o açúcar na própria forma de pudim até virar caramelo. Espalhe pelos lados e fundo.",
-        "Pudim: Bata no liquidificador o leite condensado, o leite e os ovos por 3 minutos.",
-        "Despeje na forma caramelizada (use uma peneira se quiser sem furinhos).",
-        "Cubra com papel alumínio.",
-        "Asse em **Banho-Maria** no forno a 180°C por **1 hora e 30 minutos**.",
-        "Deixe esfriar completamente e leve à geladeira por 4 horas antes de desenformar."
+        "Passo 1 (Calda): Coloque o açúcar direto na forma de pudim (aquela com furo no meio). Leve ao fogo baixo no fogão, mexendo a forma (use uma luva!) até o açúcar derreter e virar um caramelo dourado. Espalhe esse caramelo pelo fundo e laterais da forma e deixe esfriar.",
+        "Passo 2 (Massa): No liquidificador, bata o leite condensado, o leite e os ovos por 3 minutos. Bater bastante ajuda a tirar o cheiro de ovo.",
+        "Passo 3: Despeje essa mistura na forma caramelizada (se quiser sem furinhos, passe por uma peneira ao despejar).",
+        "Passo 4 (Banho-Maria): Cubra a forma com papel alumínio. Coloque a forma de pudim dentro de uma assadeira maior com água quente (até a metade da altura da forma do pudim).",
+        "Passo 5: Leve ao forno (180°C) por **1 hora e 30 minutos**.",
+        "Passo 6: Importante: Deixe esfriar totalmente fora da geladeira e depois leve para gelar por pelo menos 4 horas antes de tentar desenformar."
       ],
       tags: ["Ano Novo", "Sobremesa", "Clássico"]
     }

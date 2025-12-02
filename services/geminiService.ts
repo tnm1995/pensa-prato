@@ -89,12 +89,14 @@ export const getMockRecipes = (): Recipe[] => ([
     used_ingredients: ["250g de macarrão", "3 ovos", "150g de bacon", "50g de queijo parmesão", "1/2 caixa de creme de leite"],
     missing_ingredients: ["pimenta do reino a gosto"],
     instructions: [
-      "Coloque a água do macarrão para ferver com sal (aprox. **10 min**).",
-      "Corte os **150g de bacon** em cubos e frite por cerca de **8 minutos** até ficar crocante. Reserve.",
-      "Em uma tigela, misture as **3 gemas**, a **1/2 caixa de creme de leite** e os **50g de queijo parmesão** ralado.",
-      "Cozinhe os **250g de macarrão** por **10 minutos** até ficar al dente.",
-      "Escorra o macarrão (guarde um pouco da água) e misture rapidamente ao molho de ovos fora do fogo para não talhar.",
-      "Adicione o bacon e sirva imediatamente."
+      "Primeiro, coloque bastante água com sal para ferver em uma panela grande. Quando ferver, adicione o macarrão e cozinhe por cerca de **10 minutos**.",
+      "Enquanto a água esquenta, corte os **150g de bacon** em cubos pequenos.",
+      "Em uma frigideira, frite o bacon em fogo médio por cerca de **8 minutos** até ficar bem douradinho e crocante. Não precisa por óleo, ele solta a própria gordura.",
+      "Em uma tigela separada, misture as **3 gemas**, a **1/2 caixa de creme de leite** e os **50g de queijo parmesão** ralado até virar um creme amarelinho.",
+      "Quando o macarrão estiver cozido, escorra a água (mas guarde um pouquinho da água do cozimento).",
+      "Desligue o fogo do bacon. Misture o macarrão na frigideira do bacon.",
+      "ATENÇÃO: Com o fogo desligado, despeje a mistura de ovos sobre o macarrão quente e mexa rápido para ficar cremoso e não virar ovo mexido.",
+      "Sirva imediatamente bem quentinho!"
     ],
     tags: ["massa", "rápida", "conforto"],
     timers: [
@@ -110,11 +112,13 @@ export const getMockRecipes = (): Recipe[] => ([
     used_ingredients: ["2 ovos", "30g de queijo parmesão", "1 fatia de bacon picado", "1/4 de cebola picada", "1 dente de alho"],
     missing_ingredients: ["salsinha picada"],
     instructions: [
-      "Bata os **2 ovos** com sal e pimenta por **1 minuto**.",
-      "Refogue a **1/4 cebola** e o alho com a **fatia de bacon** picado por **3 minutos**.",
-      "Despeje os ovos na frigideira e deixe cozinhar por **4 minutos**.",
-      "Quando firmar, adicione os **30g queijo** e dobre ao meio.",
-      "Sirva dourado."
+      "Quebre os **2 ovos** em uma tigela e bata com um garfo por **1 minuto** até misturar bem a clara e a gema. Coloque uma pitada de sal.",
+      "Pique a cebola, o alho e o bacon em pedaços bem pequenos.",
+      "Aqueça uma frigideira antiaderente. Refogue o bacon, a cebola e o alho por **3 minutos** até a cebola ficar transparente.",
+      "Despeje os ovos batidos na frigideira, espalhando por todo o fundo.",
+      "Abaixe o fogo e deixe cozinhar por **4 minutos**. Quando a borda estiver soltando, jogue o queijo por cima.",
+      "Com cuidado, dobre a omelete ao meio (formando uma meia lua) e deixe dourar mais um pouquinho.",
+      "Sirva em seguida."
     ],
     tags: ["café da manhã", "low carb", "rápida"],
     timers: [
@@ -296,36 +300,48 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
   }
 
   const systemInstruction = `
-  Você é um Chef Profissional especializado em Culinária Caseira Real e Saborosa.
+  Você é um Professor de Culinária extremamente paciente e detalhista, especializado em ensinar iniciantes completos.
   
-  OBJETIVO PRINCIPAL: Sugerir receitas REAIS, que existem de verdade em restaurantes ou casas de família.
-  NÃO invente "misturas criativas" que não fazem sentido gastronômico. As pessoas vão comer isso.
+  OBJETIVO: Criar receitas DELICIOSAS usando os ingredientes disponíveis, mas focando na DIDÁTICA.
+  O usuário pode não saber cozinhar. Explique TUDO.
   
-  INGREDIENTES DISPONÍVEIS: ${ingredients.join(', ')}.
-  DESPENSA BÁSICA: ${stapleIngredients}.
+  INGREDIENTES DISPONÍVEIS (Prioridade): ${ingredients.join(', ')}.
+  DESPENSA BÁSICA (Pode usar à vontade): ${stapleIngredients}.
   
   ${methodInstruction}
   ${profileContext}
   ${restrictionRules}
 
-  REGRAS RÍGIDAS DE QUALIDADE:
-  1. RECUPERE RECEITAS CLÁSSICAS: Se tenho ovos e batata, sugira "Tortilla Espanhola" ou "Omelete de Batata", não invente "Batata cozida com casca de ovo".
-  2. SIMPLICIDADE: Se os ingredientes forem poucos, sugira pratos simples e honestos (Ex: Arroz frito, Macarrão alho e óleo, Salada Caprese).
-  3. SEM "GOROROBA": Não misture ingredientes que não combinam quimicamente ou culturalmente.
-  4. QUANTIDADES: Seja preciso. Use gramas, xícaras ou colheres. Nunca diga "um pouco".
+  REGRAS DE OURO PARA O MODO DE PREPARO (OBRIGATÓRIO):
+  1. NÃO assuma conhecimento prévio. Não diga apenas "refogue" ou "sele". 
+     -> DIGA: "Aqueça o óleo e coloque a carne, deixando fritar sem mexer por 2 minutos até ficar marrom (isso se chama selar)."
+  2. DICAS VISUAIS E SENSORIAIS: O usuário precisa saber quando passar para o próximo passo.
+     -> DIGA: "Até a cebola ficar transparente", "Até a borda começar a dourar", "Até sentir cheiro de biscoito".
+  3. EXPLIQUE O "PORQUÊ": Ensine enquanto guia.
+     -> DIGA: "Não mexa agora para não soltar água e a carne não ficar dura."
+  4. SEGURANÇA: Avise sobre óleo espirrando, vapor quente ao abrir forno/panela, cuidado com facas.
+  5. DETALHE QUANTIDADES: Repita as quantidades no texto se ajudar. Ex: "Adicione a xícara de leite que separamos".
+
+  ESTRUTURA DA RESPOSTA:
+  - Título atraente e honesto.
+  - Ingredientes com quantidades precisas (gramas, xícaras, colheres). Use "missing_ingredients" se precisar de algo fora da lista do usuário para o prato ficar bom.
+  - Instruções longas e descritivas.
   
   FORMATO JSON OBRIGATÓRIO:
   {
     "recipes": [
       {
-        "title": "Nome Real do Prato (Ex: Escondidinho de Carne)",
+        "title": "Nome Real do Prato",
         "time_minutes": 40,
         "difficulty": "Médio",
         "servings": 4,
-        "used_ingredients": ["500g de carne moída", "3 batatas grandes"], // INICIE COM QUANTIDADE
-        "missing_ingredients": ["100g de queijo mussarela"], // INICIE COM QUANTIDADE (Liste apenas o essencial que falta)
-        "instructions": ["Passo 1 detalhado com tempo **10 min**", "Passo 2 com temperatura"],
-        "tags": ["almoço", "clássico", "carne"]
+        "used_ingredients": ["500g de carne moída", "3 batatas"], 
+        "missing_ingredients": ["1 sachê de molho de tomate"],
+        "instructions": [
+            "Passo 1 (Preparação): Comece descascando as batatas. Corte-as em cubos de cerca de 2cm (tamanho de um dado). Isso ajuda a cozinhar por igual.", 
+            "Passo 2 (Refogar): Aqueça uma panela média em fogo alto com um fio de óleo. Quando estiver quente, coloque a carne moída. Dica: Não mexa imediatamente! Deixe fritar por 1 minuto para criar uma crostinha saborosa no fundo."
+        ],
+        "tags": ["almoço", "carne", "dia a dia"]
       }
     ]
   }
@@ -334,10 +350,10 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
   try {
     const response = await ai.models.generateContent({
       model: model,
-      contents: "Sugira 4 receitas deliciosas e reais baseadas no que eu tenho.",
+      contents: "Sugira 4 receitas detalhadas passo-a-passo como se estivesse ensinando alguém que nunca cozinhou.",
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.4, // Lower temperature to prioritize realistic/proven recipes over "creative" hallucinations
+        temperature: 0.4, // Lower temperature to prioritize realistic/proven recipes
         responseMimeType: "application/json",
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -422,20 +438,22 @@ export const generateRecipesByCategory = async (category: string, activeProfiles
     }
   
     const systemInstruction = `
-    Você é um Chef Profissional Criativo.
+    Você é um Professor de Culinária extremamente paciente e detalhista.
     
     TAREFA: Sugerir as 5 melhores receitas para a categoria/tema: "${category}".
     
-    CONTEXTO: O usuário quer inspiração para "${category}". Não estamos limitados ao que tem na geladeira, o usuário pode ir comprar.
+    CONTEXTO: O usuário quer inspiração para "${category}". 
     
     ${methodInstruction}
     ${profileContext}
     ${restrictionRules}
   
-    REGRAS:
-    1. SEJA TEMÁTICO: Se for "Festa Junina", sugira Pamonha, Canjica, Caldos. Se for "Páscoa", Bacalhau, Chocolate.
-    2. VARIABILIDADE: Sugira opções variadas dentro do tema (entrada, prato principal, sobremesa ou variações do prato).
-    3. INGREDIENTES: Liste todos os ingredientes necessários como "used_ingredients". Deixe "missing_ingredients" vazio, pois é uma sugestão de compra.
+    REGRAS DE DIDÁTICA (IMPORTANTE):
+    1. EXPLIQUE CADA PASSO: Assuma que o usuário nunca cozinhou antes. Explique termos como "untar", "banho-maria" ou "ponto de bico".
+    2. DETALHES VISUAIS: "Bata até dobrar de volume e ficar esbranquiçado".
+    3. INGREDIENTES COMPLETOS: Liste todos os ingredientes necessários como "used_ingredients". Deixe "missing_ingredients" vazio para este modo.
+    4. ORGANIZAÇÃO: Instruções numeradas e em ordem cronológica lógica.
+    5. EXPLIQUE O PORQUÊ: "Faça isso para evitar que a massa sole", "Isso ajuda a dar crocância".
     
     FORMATO JSON OBRIGATÓRIO:
     {
@@ -447,7 +465,7 @@ export const generateRecipesByCategory = async (category: string, activeProfiles
           "servings": 4,
           "used_ingredients": ["500g de item A", "2 latas de item B"], 
           "missing_ingredients": [], 
-          "instructions": ["Passo 1...", "Passo 2..."],
+          "instructions": ["Passo 1 (Mise en place): Separe todos os ingredientes...", "Passo 2: Misture o item A com B suavemente para não perder o ar da massa..."],
           "tags": ["${category}", "típico", "forno"]
         }
       ]
@@ -457,10 +475,10 @@ export const generateRecipesByCategory = async (category: string, activeProfiles
     try {
       const response = await ai.models.generateContent({
         model: model,
-        contents: `Quero 5 receitas incríveis para o tema: ${category}`,
+        contents: `Quero 5 receitas incríveis e explicadas passo-a-passo para o tema: ${category}`,
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.6, // Higher temp for creativity in suggestions
+          temperature: 0.5, // Balanced creativity and precision
           responseMimeType: "application/json",
           safetySettings: [
             { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
