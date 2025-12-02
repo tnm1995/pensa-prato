@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, FileText, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { User, FileText, AlertCircle, ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { db, doc, setDoc, collection, query, where, getDocs, updateProfile, auth } from '../services/firebase';
 import { validateCPF, formatCPF } from '../utils/cpf';
 import { Logo } from './Logo';
@@ -8,9 +8,10 @@ interface CompleteProfileScreenProps {
   onCompleteSuccess: () => void;
   initialName?: string;
   initialEmail?: string;
+  onBack: () => void;
 }
 
-export const CompleteProfileScreen: React.FC<CompleteProfileScreenProps> = ({ onCompleteSuccess, initialName = '', initialEmail = '' }) => {
+export const CompleteProfileScreen: React.FC<CompleteProfileScreenProps> = ({ onCompleteSuccess, initialName = '', initialEmail = '', onBack }) => {
   const [name, setName] = useState(initialName);
   const [cpf, setCpf] = useState('');
   const [loading, setLoading] = useState(false);
@@ -122,6 +123,16 @@ export const CompleteProfileScreen: React.FC<CompleteProfileScreenProps> = ({ on
       <div className="absolute top-0 left-0 w-full h-[35vh] bg-gradient-to-b from-blue-50 via-emerald-50/30 to-white pointer-events-none z-0"></div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-md mx-auto z-10 relative">
+        
+        {/* Back Button - Allows logout/cancel */}
+        <button 
+            onClick={onBack}
+            className="absolute top-6 left-4 p-3 text-gray-500 hover:text-[#00C853] bg-white/80 backdrop-blur-md shadow-sm border border-gray-100 rounded-full transition-all hover:scale-105 active:scale-95"
+            title="Voltar / Sair"
+        >
+            <ChevronLeft className="w-6 h-6" />
+        </button>
+
         <div className="text-center mb-8 pt-10">
             <div className="inline-block p-3 bg-white rounded-full shadow-lg shadow-emerald-100 mb-4">
                 <Logo size={48} />
