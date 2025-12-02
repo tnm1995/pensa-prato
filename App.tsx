@@ -91,14 +91,6 @@ function App() {
     return () => clearTimeout(timer);
   }, [isAuthChecking, user, isDemoMode]);
 
-  // FORCE NAVIGATION FAILSAFE: If user exists but view is stuck on Login/Register, force Welcome
-  useEffect(() => {
-    if (user && [AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD].includes(currentView)) {
-        console.log("Forcing navigation to WELCOME due to active session");
-        setCurrentView(AppView.WELCOME);
-    }
-  }, [user, currentView]);
-
   // FIREBASE AUTH + SYNC
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
@@ -117,22 +109,43 @@ function App() {
                  // Use snapshot listener for admin status AND cpf check to be reactive
                  onSnapshot(userDocRef, (docSnap: any) => {
                     let adminStatus = false;
+                    let hasDoc = docSnap && docSnap.exists;
+                    let hasCpf = false;
                     
-                    if (docSnap && docSnap.exists) {
+                    if (hasDoc) {
                         const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
                         if (data?.isAdmin === true) adminStatus = true;
-
-                        // CHECK CPF: If missing, force Complete Profile
-                        if (!data?.cpf) {
-                            setCurrentView(AppView.COMPLETE_PROFILE);
-                        } else if (currentView === AppView.COMPLETE_PROFILE) {
-                            setCurrentView(AppView.WELCOME);
-                        }
+                        if (data?.cpf) hasCpf = true;
                     }
                     setIsAdmin(adminStatus);
+
+                    // NAVIGATE based on status
+                    setCurrentView((prev) => {
+                        // If user is currently in an auth flow screen or complete profile
+                        const isAuthFlow = [AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE].includes(prev);
+                        
+                        // If they don't have a doc or don't have CPF, force COMPLETE_PROFILE
+                        if (!hasDoc || !hasCpf) {
+                             return AppView.COMPLETE_PROFILE;
+                        }
+
+                        // If they have everything and are in auth flow, go to Welcome
+                        if (isAuthFlow) {
+                             return AppView.WELCOME;
+                        }
+
+                        // Otherwise keep current view (e.g. if they refreshed in Profile)
+                        return prev;
+                    });
+
                  }, (err: any) => {
                      // Permission denied expected if rules not set. Treat as non-admin.
                      console.warn("User/Admin check error:", err);
+                     // Fallback to Welcome if permissions fail to avoid lockout
+                     setCurrentView((prev) => {
+                         if ([AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD].includes(prev)) return AppView.WELCOME;
+                         return prev;
+                     });
                  });
 
                  // FAMILY
@@ -464,7 +477,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white font-sans antialiased text-gray-900 relative">
-      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
+      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {/* Navigation handled by onSnapshot */}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
       {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={() => setCurrentView(AppView.LOGIN)} />}
       {currentView === AppView.FORGOT_PASSWORD && <ForgotPasswordScreen onBack={() => setCurrentView(AppView.LOGIN)} />}
       {currentView === AppView.COMPLETE_PROFILE && user && <CompleteProfileScreen onCompleteSuccess={() => setCurrentView(AppView.WELCOME)} initialName={user.displayName} initialEmail={user.email} />}

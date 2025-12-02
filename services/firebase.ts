@@ -25,6 +25,8 @@ const googleProviderInstance = new firebase.auth.GoogleAuthProvider();
 
 googleProviderInstance.addScope("profile");
 googleProviderInstance.addScope("email");
+// FORCE ACCOUNT SELECTION
+googleProviderInstance.setCustomParameters({ prompt: 'select_account' });
 
 export const auth = authInstance;
 export const db = dbInstance;
