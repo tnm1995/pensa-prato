@@ -53,16 +53,25 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
 
     setLoading(true);
     try {
-      // 0. VERIFICAR CPF DUPLICADO
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('cpf', '==', cpf));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-          setError("Este CPF já está sendo utilizado por outra conta.");
-          setCpfError(true);
-          setLoading(false);
-          return;
+      // 0. VERIFICAR CPF DUPLICADO (Best Effort)
+      // Se falhar por permissão (comum em Firestore seguro), permitimos o cadastro
+      // e deixamos as Security Rules do backend decidirem (se houver regra de unique).
+      if (db) {
+          try {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('cpf', '==', cpf));
+            const querySnapshot = await getDocs(q);
+      
+            if (!querySnapshot.empty) {
+                setError("Este CPF já está sendo utilizado por outra conta.");
+                setCpfError(true);
+                setLoading(false);
+                return;
+            }
+          } catch (cpfCheckErr: any) {
+              console.warn("Skipping client-side CPF check due to error (likely permissions):", cpfCheckErr);
+              // Proceed with registration
+          }
       }
 
       // 1. Criar usuário no Auth

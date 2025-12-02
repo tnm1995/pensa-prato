@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { auth, googleProvider, signInWithPopup, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from '../services/firebase';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, CheckSquare, Square } from 'lucide-react';
@@ -40,8 +42,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-      await setPersistence(auth, persistence);
+      try {
+          const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+          await setPersistence(auth, persistence);
+      } catch (pErr) {
+          console.warn("Persistence setting failed, continuing with login session:", pErr);
+      }
+      
       await signInWithPopup(auth, googleProvider);
       setLoading(false); // Clean up loading state before navigating
       onLoginSuccess();
@@ -72,8 +79,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-      await setPersistence(auth, persistence);
+      try {
+          const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+          await setPersistence(auth, persistence);
+      } catch (pErr) {
+          console.warn("Persistence setting failed, continuing with login session:", pErr);
+      }
 
       if (rememberMe) {
         localStorage.setItem('pensa_prato_saved_email', email);
