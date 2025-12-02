@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppView, FamilyMember, CookingMethod, ShoppingItem, Recipe, ScanResult } from './types';
 import { analyzeFridgeImage, generateRecipes, getMockScanResult, getMockRecipes, generateRecipesByCategory } from './services/geminiService';
@@ -480,6 +479,7 @@ function App() {
     setImagePreview(URL.createObjectURL(file));
     setLoadingMode('analyzing');
     setCurrentView(AppView.ANALYZING);
+    setScanResult(null); // Clear previous result
     setError(null);
     try {
       const result = await analyzeFridgeImage(file);
@@ -518,6 +518,7 @@ function App() {
   const handleSelectCategory = async (category: string) => {
       setLoadingMode('recipes');
       setCurrentView(AppView.ANALYZING);
+      setScanResult(null); // Important: Clear scan result to signal "Explore Mode"
       
       try {
           let recipeSuggestions: Recipe[] = [];
@@ -543,6 +544,9 @@ function App() {
     AppView.ANALYZING, AppView.RECIPE_DETAIL, AppView.PROFILE_EDITOR,
     AppView.ADMIN_PANEL
   ].includes(currentView);
+
+  // Derive isExplore from state: If showing recipes but no scanResult, it's explore mode
+  const isExploreMode = currentView === AppView.RECIPES && scanResult === null;
 
   if (isAuthChecking) return <SplashScreen />;
 
@@ -583,8 +587,8 @@ function App() {
 
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
       {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => { setImagePreview(null); setScanResult(null); setCurrentView(AppView.UPLOAD); }} />}
-      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(recipes.length > 0 && scanResult ? AppView.RESULTS : AppView.EXPLORE)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} cookingMethod={cookingMethod} />}
-      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(AppView.RECIPES)} isFavorite={favoriteRecipes.some(r => r.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={(r) => handleRateRecipe(selectedRecipe, r)} shoppingList={shoppingList} onAddToShoppingList={handleAddToShoppingList} cookingMethod={cookingMethod} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
+      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(recipes.length > 0 && scanResult ? AppView.RESULTS : AppView.EXPLORE)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} cookingMethod={cookingMethod} isExplore={isExploreMode} />}
+      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(AppView.RECIPES)} isFavorite={favoriteRecipes.some(r => r.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={(r) => handleRateRecipe(selectedRecipe, r)} shoppingList={shoppingList} onAddToShoppingList={handleAddToShoppingList} cookingMethod={cookingMethod} onFinishCooking={() => handleFinishCooking(selectedRecipe)} isExplore={isExploreMode} />}
 
       {showBottomMenu && <BottomMenu currentView={currentView} activeTab={profileInitialTab} onNavigate={(v, tab) => { if (tab) setProfileInitialTab(tab); setCurrentView(v); }} />}
     </div>

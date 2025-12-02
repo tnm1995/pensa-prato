@@ -28,7 +28,8 @@ import {
   Flame,
   UtensilsCrossed,
   Share2,
-  Mic
+  Mic,
+  Circle
 } from 'lucide-react';
 
 interface RecipeDetailProps {
@@ -41,6 +42,7 @@ interface RecipeDetailProps {
   onAddToShoppingList: (item: string, quantity?: string) => void;
   cookingMethod?: CookingMethod;
   onFinishCooking?: () => void;
+  isExplore?: boolean;
 }
 
 export const RecipeDetail: React.FC<RecipeDetailProps> = ({ 
@@ -52,7 +54,8 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   shoppingList,
   onAddToShoppingList,
   cookingMethod,
-  onFinishCooking
+  onFinishCooking,
+  isExplore = false
 }) => {
   // State for Cooking Mode
   const [cookingMode, setCookingMode] = useState(false);
@@ -87,13 +90,12 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 
   const parseIngredientForList = (ingredient: string) => {
     const clean = ingredient.trim();
-    // Match fraction (1/2, 1 / 2) or number (1, 1.5, 1,5) at start
     const numberRegex = /^(\d+\s*\/\s*\d+|\d+(?:[.,]\d+)?)\s*/;
     const match = clean.match(numberRegex);
     
     if (!match) return { name: clean, quantity: '1x' };
     
-    const numberPart = match[1].replace(/\s/g, ''); // Remove spaces from fraction "1 / 2" -> "1/2"
+    const numberPart = match[1].replace(/\s/g, ''); 
     const restOfString = clean.substring(match[0].length).trim();
     
     const UNITS = [
@@ -107,16 +109,12 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
     const isFraction = numberPart.includes('/');
     
     if (isUnit) {
-        // If it has a unit (200g, 1 lata), we usually keep it in the name to preserve context
-        // unless we want to parse units strictly. For now, keep visual consistency.
         return { name: clean, quantity: '1x' };
     } 
     
     if (isFraction) {
-        // "1/2 cebola" -> Qty: 1/2, Name: cebola
         return { name: restOfString, quantity: numberPart };
     } else {
-        // "2 cebolas" -> Qty: 2x, Name: cebolas
         return { name: restOfString, quantity: numberPart + 'x' };
     }
   };
@@ -142,20 +140,13 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
     }));
   }, []);
 
-  // Formata números decimais para frações culinárias amigáveis (Ex: 0.25 -> 1/4)
   const formatQuantity = (value: number): string => {
-    // Round to 2 decimal places to avoid floating point weirdness
     const v = Math.round(value * 100) / 100;
-    
     if (v === 0) return "0";
-    
-    // Integers
     if (Number.isInteger(v)) return v.toString();
 
     const whole = Math.floor(v);
     const decimal = v - whole;
-    
-    // Close enough to whole number?
     if (decimal < 0.05) return whole.toString();
     if (decimal > 0.95) return (whole + 1).toString();
 
@@ -167,24 +158,16 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         { val: 0.75, label: '3/4' },
         { val: 0.125, label: '1/8' }
     ];
-
-    // Find closest fraction
-    const match = fractions.find(f => Math.abs(decimal - f.val) < 0.06); // Tolerance
-
+    const match = fractions.find(f => Math.abs(decimal - f.val) < 0.06); 
     if (match) {
         return whole > 0 ? `${whole} ${match.label}` : match.label;
     }
-
-    // Fallback: 1 decimal place, replacing dot with comma
     return v.toFixed(1).replace('.', ',').replace(',0', '');
   };
 
   const scaleText = (text: string, originalServings: number, newServings: number): string => {
     if (!text) return "";
-    
-    // Calcula a proporção, mas sempre roda a lógica para corrigir frações ruins (ex: 4/16)
     const ratio = newServings / originalServings;
-
     return text.replace(/(\d+(?:[.,]\d+)?|\d+\/\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?/g, (match, numberStr, space, unit) => {
         const lowerUnit = unit ? unit.toLowerCase() : '';
         const forbiddenUnits = ['min', 'minuto', 'h', 'grau', '°', 'c', 'passo'];
@@ -199,10 +182,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         }
         
         if (isNaN(value)) return match;
-
         const newValue = value * ratio;
-        
-        // Usa o formatador inteligente
         return `${formatQuantity(newValue)}${space}${unit || ''}`;
     });
   };
@@ -224,13 +204,10 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const formatInstructionText = (text: string) => {
     if (!text) return null;
     const timeRegex = /\b(\d+(?:[.,]\d+)?\s*(?:minutos?|min|h(?:oras?)?|s(?:egundos?)?))\b/gi;
-    
-    // Simple bold if user has markdown
     let parts = text.split(/\*\*(.*?)\*\*/g);
     
     return parts.map((part, index) => {
         if (index % 2 === 1) return <strong key={index} className="font-bold text-gray-900 bg-emerald-50 px-1 rounded mx-0.5">{part}</strong>;
-        
         const timeParts = part.split(timeRegex);
         return (
             <span key={index}>
@@ -320,35 +297,26 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
     }
   }, [currentStep, cookingMode, isFinished]);
 
-  // --- VOICE RECOGNITION SETUP ---
   useEffect(() => {
     let recognition: any = null;
-    
     if (cookingMode && !isFinished) {
-        // Check browser support
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
             recognition.continuous = true;
             recognition.lang = 'pt-BR';
             recognition.interimResults = false;
-
             recognition.onstart = () => setIsListening(true);
             recognition.onend = () => {
-                // Restart if still in cooking mode (keep listening)
                 if (cookingMode && !isFinished) {
                     try { recognition.start(); } catch(e) {}
                 } else {
                     setIsListening(false);
                 }
             };
-
             recognition.onresult = (event: any) => {
                 const last = event.results.length - 1;
                 const command = event.results[last][0].transcript.toLowerCase().trim();
-                console.log("Voice Command:", command);
-
                 if (command.includes('próximo') || command.includes('seguinte') || command.includes('avançar')) {
                     handleNextStep();
                 } else if (command.includes('voltar') || command.includes('anterior')) {
@@ -360,13 +328,11 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                     setIsSpeaking(false);
                 }
             };
-
             try { recognition.start(); } catch(e) { console.error(e); }
         }
     } else {
         setIsListening(false);
     }
-
     return () => {
         if (recognition) recognition.stop();
     };
@@ -414,22 +380,18 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
     text += `⏱️ Tempo: ${recipe.time_minutes} min\n`;
     text += `👥 Porções: ${desiredServings}\n`;
     text += `🔥 Dificuldade: ${recipe.difficulty}\n\n`;
-
     text += `*Ingredientes:*\n`;
     const allIngredients = [...recipe.used_ingredients, ...recipe.missing_ingredients];
     allIngredients.forEach(ing => {
         const scaled = scaleText(ing, recipe.servings, desiredServings).replace(/\*\*/g, '');
         text += `• ${scaled}\n`;
     });
-
     text += `\n*Modo de Preparo:*\n`;
     recipe.instructions.forEach((step, i) => {
         const scaled = scaleText(step, recipe.servings, desiredServings).replace(/\*\*/g, '');
         text += `${i + 1}. ${scaled}\n`;
     });
-
     text += `\n_Encontre mais receitas no App Pensa Prato!_ 📲`;
-
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -438,7 +400,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
     if (isFinished) {
         return (
             <div className="fixed inset-0 z-[100] bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 flex flex-col items-center justify-center text-white p-6 overflow-hidden">
-                {/* Confetti Layer */}
                 <div className="absolute inset-0 pointer-events-none">
                      {confettiParticles.map(c => (
                         <div key={c.id} className="absolute w-3 h-3 rounded-sm" style={{ top: '-10%', left: c.left, backgroundColor: c.backgroundColor, animation: `confetti-fall ${c.animationDuration} linear infinite` }} />
@@ -446,20 +407,14 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                      <style>{`@keyframes confetti-fall { 100% { transform: translateY(110vh) rotate(720deg); } }`}</style>
                 </div>
 
-                {/* Main Card */}
                 <div className="relative bg-white/10 backdrop-blur-2xl p-8 pt-12 rounded-[2.5rem] w-full max-w-sm text-center border border-white/20 shadow-2xl animate-in zoom-in-95 duration-500">
-                    
-                    {/* Floating Success Icon */}
                     <div className="absolute -top-12 left-1/2 -translate-x-1/2">
                         <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-900/50 ring-4 ring-emerald-800/50 animate-in bounce-in duration-700">
                             <CheckCircle2 className="w-12 h-12 text-white drop-shadow-md" />
                         </div>
                     </div>
-
                     <h2 className="text-4xl font-bold mb-2 mt-4 text-white drop-shadow-sm">Delícia!</h2>
                     <p className="text-emerald-100 mb-8 text-lg font-medium">Você arrasou na cozinha.</p>
-
-                    {/* Rating Section */}
                     <div className="bg-black/20 rounded-2xl p-6 mb-8 backdrop-blur-sm">
                         <p className="text-xs font-bold text-emerald-200 uppercase tracking-widest mb-4">Avalie o prato</p>
                         <div className="flex justify-center gap-3">
@@ -485,8 +440,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                             ))}
                         </div>
                     </div>
-
-                    {/* Action Buttons */}
                     <div className="space-y-3">
                         <button 
                             onClick={handleShareRecipe}
@@ -522,7 +475,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
              <div className="bg-gray-800 p-2 rounded-full"><ChefHat className="w-6 h-6 text-emerald-400" /></div>
              <span className="font-bold text-gray-300">{recipe.time_minutes} min</span>
           </div>
-          
           <div className="flex items-center gap-4">
               {isListening && (
                   <div className="flex items-center gap-2 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/30 animate-pulse">
@@ -533,11 +485,9 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
               <button onClick={() => setCookingMode(false)} className="p-2 bg-gray-800 rounded-full"><X className="w-5 h-5" /></button>
           </div>
         </div>
-
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center relative">
             <p className="text-gray-500 text-sm uppercase tracking-widest mb-8">Passo {currentStep + 1} / {recipe.instructions.length}</p>
             <p className="text-3xl md:text-4xl font-medium leading-relaxed mb-10">{formatInstructionTextCookingMode(scaledText)}</p>
-            
             {timerDuration > 0 && (
                 <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 w-full max-w-md flex items-center justify-between animate-in slide-in-from-bottom-4">
                     <div className="text-left pl-2">
@@ -567,7 +517,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                 </div>
             )}
         </div>
-
         <div className="bg-neutral-900 p-6 pb-10 rounded-t-[2.5rem] border-t border-gray-800 flex justify-center gap-6">
             <button onClick={() => currentStep > 0 && setCurrentStep(c => c - 1)} className="p-5 bg-gray-800 rounded-2xl text-gray-400"><SkipBack className="w-6 h-6" /></button>
             <button onClick={togglePlayPause} className={`p-5 rounded-2xl ${isSpeaking ? 'bg-amber-500 text-white' : 'bg-gray-800 text-white'}`}>{isSpeaking ? <Pause className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}</button>
@@ -579,11 +528,21 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 
   return (
     <div className="min-h-screen bg-white pb-24">
-      <div className="bg-emerald-600 pt-12 pb-8 px-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden text-white">
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>
-        <div className="flex justify-between items-center relative z-10 mb-6">
+      <div className={`pt-12 pb-8 px-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden text-white ${isExplore ? 'h-80' : 'bg-emerald-600'}`}>
+        
+        {isExplore && recipe.image ? (
+            <>
+                <div className="absolute inset-0">
+                    <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/30"></div>
+                </div>
+            </>
+        ) : (
+            <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>
+        )}
+
+        <div className="flex justify-between items-center relative z-10 mb-20 md:mb-6">
             <button onClick={onBack} className="p-2 bg-white/20 backdrop-blur-md rounded-full hover:bg-white/30 transition-colors"><ArrowLeft className="w-6 h-6" /></button>
-            
             <div className="flex gap-2">
                 <button onClick={handleShareRecipe} className="p-2.5 bg-white/20 backdrop-blur-md rounded-full hover:bg-white/30 transition-colors">
                     <Share2 className="w-6 h-6 text-white" />
@@ -593,23 +552,26 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                 </button>
             </div>
         </div>
-        <div className="relative z-10">
+
+        <div className="relative z-10 mt-auto">
             <div className="flex gap-2 mb-3">
-                <span className="bg-emerald-800/50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-500/30">{recipe.difficulty}</span>
+                <span className="bg-emerald-800/50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-500/30 backdrop-blur-md">{recipe.difficulty}</span>
                 {cookingMethod && cookingMethod !== CookingMethod.ANY && (
-                    <span className="bg-emerald-800/50 px-2 py-0.5 rounded text-[10px] font-bold uppercase flex gap-1 items-center border border-emerald-500/30">{getMethodIcon()} {cookingMethod}</span>
+                    <span className="bg-emerald-800/50 px-2 py-0.5 rounded text-[10px] font-bold uppercase flex gap-1 items-center border border-emerald-500/30 backdrop-blur-md">{getMethodIcon()} {cookingMethod}</span>
                 )}
             </div>
-            <h1 className="text-3xl font-bold mb-4">{recipe.title}</h1>
+            <h1 className="text-3xl font-bold mb-4 leading-tight">{recipe.title}</h1>
             <div className="flex gap-4 text-emerald-100 text-sm font-medium">
-                <span className="bg-black/20 px-3 py-1.5 rounded-xl backdrop-blur-sm flex gap-1 items-center"><Clock className="w-4 h-4" /> {recipe.time_minutes} min</span>
-                <span className="bg-black/20 px-3 py-1.5 rounded-xl backdrop-blur-sm flex gap-1 items-center"><Users className="w-4 h-4" /> {desiredServings} pessoas</span>
+                <span className="bg-black/30 px-3 py-1.5 rounded-xl backdrop-blur-sm flex gap-1 items-center border border-white/10"><Clock className="w-4 h-4" /> {recipe.time_minutes} min</span>
+                <span className="bg-black/30 px-3 py-1.5 rounded-xl backdrop-blur-sm flex gap-1 items-center border border-white/10"><Users className="w-4 h-4" /> {desiredServings} pessoas</span>
             </div>
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-8">
-        <div className="bg-white rounded-2xl p-4 flex justify-between border border-gray-100 shadow-sm items-center">
+      <div className="px-6 py-6 space-y-8 -mt-6 relative z-20">
+        
+        {/* Portion Control */}
+        <div className="bg-white rounded-2xl p-4 flex justify-between border border-gray-100 shadow-lg items-center">
             <div className="flex gap-3 items-center">
                 <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600"><Users className="w-5 h-5" /></div>
                 <div><p className="text-xs font-bold text-gray-400 uppercase">Porções</p><p className="text-sm font-bold">Ajustar receita</p></div>
@@ -621,8 +583,12 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
             </div>
         </div>
 
+        {/* Ingredients Section */}
         <div>
-          <h3 className="text-lg font-bold mb-4 flex gap-2 items-center"><ShoppingBasket className="w-5 h-5 text-emerald-600" /> Ingredientes</h3>
+          <h3 className="text-lg font-bold mb-4 flex gap-2 items-center">
+              <ShoppingBasket className="w-5 h-5 text-emerald-600" /> 
+              {isExplore ? 'Lista de Ingredientes' : 'Ingredientes'}
+          </h3>
           <div className="space-y-6">
             {recipe.used_ingredients.length > 0 && (
                 <ul className="space-y-3">
@@ -631,15 +597,23 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                         const clean = scaled.replace(/\*\*/g, '');
                         const inList = isInShoppingList(clean);
                         return (
-                            <li key={i} className="flex justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                                <div className="flex gap-3"><CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" /><span>{formatIngredientDisplay(clean)}</span></div>
-                                <button onClick={() => handleAddToList(scaled)} disabled={inList} className={`p-1.5 rounded-lg ${inList ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-gray-300 shadow-sm'}`}>{inList ? <Check className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}</button>
+                            <li key={i} className={`flex justify-between gap-3 p-3 rounded-xl border ${isExplore ? 'bg-white border-gray-100' : 'bg-gray-50 border-gray-100'}`}>
+                                <div className="flex gap-3">
+                                    {isExplore ? (
+                                        <Circle className="w-2 h-2 text-emerald-400 mt-2 flex-shrink-0 fill-current" />
+                                    ) : (
+                                        <CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                                    )}
+                                    <span>{formatIngredientDisplay(clean)}</span>
+                                </div>
+                                <button onClick={() => handleAddToList(scaled)} disabled={inList} className={`p-1.5 rounded-lg ${inList ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-50 text-gray-300 hover:text-emerald-500 shadow-sm'}`}>{inList ? <Check className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}</button>
                             </li>
                         );
                     })}
                 </ul>
             )}
-            {recipe.missing_ingredients.length > 0 && (
+            
+            {!isExplore && recipe.missing_ingredients.length > 0 && (
                 <div>
                     <p className="text-xs font-bold text-orange-400 uppercase mb-3 pl-1">Falta comprar</p>
                     <ul className="space-y-3">

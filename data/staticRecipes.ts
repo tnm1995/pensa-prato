@@ -9,6 +9,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Difícil",
       servings: 10,
       rating: 5,
+      image: "https://images.unsplash.com/photo-1574672174777-b41d8b620b04?q=80&w=1000&auto=format&fit=crop",
       used_ingredients: [
         "1 peru inteiro (aprox. 4kg)",
         "1 garrafa de vinho branco seco",
@@ -16,9 +17,10 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
         "1 cebola grande",
         "4 dentes de alho",
         "Ervas finas (alecrim, tomilho)",
-        "Sal e pimenta do reino a gosto"
+        "Sal e pimenta do reino a gosto",
+        "Papel alumínio para cobrir"
       ],
-      missing_ingredients: ["Papel alumínio para cobrir"],
+      missing_ingredients: [],
       instructions: [
         "Descongele o peru na geladeira por 48 horas antes do preparo.",
         "Prepare a marinada: bata no liquidificador o vinho, cebola, alho, ervas, sal e pimenta.",
@@ -35,6 +37,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Fácil",
       servings: 8,
       rating: 4.9,
+      image: "https://img.cybercook.com.br/receitas/12/salpicao-de-frango-tradicional-6.jpeg",
       used_ingredients: [
         "1kg de peito de frango cozido e desfiado",
         "2 cenouras raladas",
@@ -43,9 +46,10 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
         "1 maçã verde picada",
         "1 pote de maionese (500g)",
         "1 caixinha de creme de leite",
-        "Suco de 1 limão"
+        "Suco de 1 limão",
+        "Batata palha a gosto"
       ],
-      missing_ingredients: ["Batata palha a gosto"],
+      missing_ingredients: [],
       instructions: [
         "Em uma tigela grande, misture o frango desfiado, a cenoura ralada, o milho, a maçã e as passas.",
         "Tempere com sal, pimenta e o suco de limão.",
@@ -61,6 +65,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Fácil",
       servings: 8,
       rating: 4.8,
+      image: "https://claudia.abril.com.br/wp-content/uploads/2020/02/receita-farofa-california-natal-1.jpg",
       used_ingredients: [
         "500g de farinha de mandioca torrada",
         "200g de bacon picado",
@@ -83,11 +88,12 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       tags: ["Natal", "Acompanhamento", "Brasileira"]
     },
     {
-      title: "Rabanada de Forno (Mais Leve)",
+      title: "Rabanada de Forno",
       time_minutes: 40,
       difficulty: "Fácil",
       servings: 10,
       rating: 4.7,
+      image: "https://vovopalmirinha.com.br/wp-content/uploads/2020/02/rabanada-forno.jpg",
       used_ingredients: [
         "4 pães franceses amanhecidos",
         "2 xícaras de leite",
@@ -115,6 +121,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Fácil",
       servings: 12,
       rating: 5,
+      image: "https://images.unsplash.com/photo-1610626087588-410c59828d50?q=80&w=1000&auto=format&fit=crop",
       used_ingredients: [
         "4 xícaras de leite",
         "4 ovos",
@@ -140,6 +147,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Médio",
       servings: 10,
       rating: 4.9,
+      image: "https://static.itdg.com.br/images/1200-675/d87178c52089c16928e4695574514300/314227-original.jpg",
       used_ingredients: [
         "500g de canjica branca",
         "1 lata de leite condensado",
@@ -147,9 +155,10 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
         "5 cravos da índia",
         "1 pau de canela",
         "200ml de leite de coco",
-        "Canela em pó para polvilhar"
+        "Canela em pó para polvilhar",
+        "Amendoim torrado moído (opcional)"
       ],
-      missing_ingredients: ["Amendoim torrado moído (opcional)"],
+      missing_ingredients: [],
       instructions: [
         "Deixe a canjica de molho em água por 12 horas.",
         "Escorra e cozinhe na panela de pressão com água nova por **30 minutos**.",
@@ -165,6 +174,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Fácil",
       servings: 6,
       rating: 4.8,
+      image: "https://images.unsplash.com/photo-1547592166-23acbe346499?q=80&w=1000&auto=format&fit=crop",
       used_ingredients: [
         "1kg de batata descascada",
         "2 linguiças calabresas em rodelas",
@@ -185,11 +195,12 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       tags: ["Festa Junina", "Sopa", "Inverno"]
     },
     {
-      title: "Pamonha de Forno (Preguiçosa)",
+      title: "Pamonha de Forno",
       time_minutes: 60,
       difficulty: "Fácil",
       servings: 8,
       rating: 4.6,
+      image: "https://claudia.abril.com.br/wp-content/uploads/2020/02/receita-pamonha-de-forno.jpg",
       used_ingredients: [
         "2 latas de milho verde (sem água)",
         "1 garrafa de leite de coco (200ml)",
@@ -216,6 +227,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Médio",
       servings: 6,
       rating: 5,
+      image: "https://naminhapanela.com/wp-content/uploads/2012/03/Bacalhau-Gomes-de-Sa-2-1024x680.jpg",
       used_ingredients: [
         "500g de bacalhau dessalgado em lascas",
         "500g de batatas cozidas em rodelas",
@@ -242,15 +254,17 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Fácil",
       servings: 10,
       rating: 4.9,
+      image: "https://www.receiteria.com.br/wp-content/uploads/ovo-de-pascoa-na-travessa-13.jpg",
       used_ingredients: [
         "2 latas de leite condensado",
         "2 caixas de creme de leite",
         "4 colheres (sopa) de chocolate em pó",
         "1 colher (sopa) de manteiga",
         "200g de chocolate meio amargo picado",
-        "Granulado ou raspas de chocolate"
+        "Granulado ou raspas de chocolate",
+        "Bombons picados ou uvas (opcional)"
       ],
-      missing_ingredients: ["Bombons picados ou uvas (opcional)"],
+      missing_ingredients: [],
       instructions: [
         "Faça um brigadeiro mole: leve ao fogo 1 leite condensado, 1 creme de leite, o chocolate em pó e a manteiga. Mexa até desgrudar levemente do fundo.",
         "Faça um creme branco: leve ao fogo 1 leite condensado, 1 creme de leite e mexa até engrossar.",
@@ -266,6 +280,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Médio",
       servings: 8,
       rating: 4.5,
+      image: "https://www.sabornamesa.com.br/media/k2/items/cache/0904d13e33464a4b49467657d2948c26_XL.jpg",
       used_ingredients: [
         "500g de farinha de trigo",
         "10g de fermento biológico seco",
@@ -274,9 +289,10 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
         "1/2 xícara de açúcar",
         "1 xícara de água morna",
         "Essência de laranja ou baunilha",
-        "Gotas de chocolate ou frutas cristalizadas"
+        "Gotas de chocolate ou frutas cristalizadas",
+        "Cobertura de açúcar (opcional)"
       ],
-      missing_ingredients: ["Cobertura de açúcar (opcional)"],
+      missing_ingredients: [],
       instructions: [
         "Misture o fermento com um pouco de farinha e água morna. Deixe espumar por 15 min.",
         "Na batedeira (gancho) ou tigela, misture o restante da farinha, açúcar, manteiga, gemas e a essência.",
@@ -296,6 +312,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Médio",
       servings: 8,
       rating: 4.8,
+      image: "https://i.pinimg.com/originals/93/29/4f/93294f9996d914569426f04c06236b28.jpg",
       used_ingredients: [
         "1.5kg de lombo de porco inteiro",
         "1 abacaxi em rodelas",
@@ -323,6 +340,7 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       difficulty: "Fácil",
       servings: 6,
       rating: 4.7,
+      image: "https://www.comidaereceitas.com.br/img/sizeswp/1200x675/2008/12/Arroz_lentilha.jpg",
       used_ingredients: [
         "1 xícara de lentilha crua",
         "1 xícara de arroz branco",
@@ -342,11 +360,12 @@ export const seasonalRecipesData: Record<string, Recipe[]> = {
       tags: ["Ano Novo", "Acompanhamento", "Sorte"]
     },
     {
-      title: "Pudim de Leite Condensado (Sem Erro)",
+      title: "Pudim de Leite Condensado",
       time_minutes: 90,
       difficulty: "Médio",
       servings: 10,
       rating: 5,
+      image: "https://images.unsplash.com/photo-1590069006232-a544b6765d75?q=80&w=1000&auto=format&fit=crop",
       used_ingredients: [
         "1 lata de leite condensado",
         "2 latas de leite (use a lata de leite condensado como medida)",
