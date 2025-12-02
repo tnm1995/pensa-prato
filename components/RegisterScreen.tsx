@@ -31,6 +31,16 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
     }
   };
 
+  const validatePassword = (pass: string): { isValid: boolean; message?: string } => {
+    if (pass.length < 8) return { isValid: false, message: "A senha deve ter pelo menos 8 caracteres." };
+    if (!/[A-Z]/.test(pass)) return { isValid: false, message: "A senha deve conter pelo menos uma letra maiúscula." };
+    if (!/[a-z]/.test(pass)) return { isValid: false, message: "A senha deve conter pelo menos uma letra minúscula." };
+    if (!/[0-9]/.test(pass)) return { isValid: false, message: "A senha deve conter pelo menos um número." };
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pass)) return { isValid: false, message: "A senha deve conter pelo menos um caractere especial (!@#$)." };
+    
+    return { isValid: true };
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -46,8 +56,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
         return;
     }
 
-    if (password.length < 6) {
-        setError("A senha deve ter pelo menos 6 caracteres.");
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+        setError(passwordCheck.message || "Senha inválida.");
         return;
     }
 
@@ -248,6 +259,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
                     className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-transparent focus:bg-white focus:border-emerald-100 focus:ring-4 focus:ring-emerald-50 rounded-2xl text-gray-800 placeholder-gray-400 outline-none transition-all font-medium"
                     required
                 />
+                <p className="text-[10px] text-gray-400 mt-1.5 ml-4">
+                  Min. 8 caracteres, maiúscula, minúscula, número e especial.
+                </p>
             </div>
 
             {error && (
