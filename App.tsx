@@ -64,6 +64,9 @@ function App() {
   // Flag to prevent snapshot listeners from redirecting during logout process
   const isLoggingOut = useRef(false);
 
+  // Store unsubscribe functions for cleanup
+  const unsubs = useRef<(() => void)[]>([]);
+
   const [loadingMode, setLoadingMode] = useState<'analyzing' | 'recipes'>('analyzing');
   
   // Track if it's the initial auth check (F5/Load) to enforce Welcome screen only then
@@ -78,6 +81,11 @@ function App() {
       return snap.docs.map(mapper);
     }
     return [];
+  };
+
+  const clearListeners = () => {
+      unsubs.current.forEach(u => u());
+      unsubs.current = [];
   };
 
   // FAILSAFE TIMEOUT: Ensure Splash Screen disappears even if Firebase hangs
@@ -97,6 +105,9 @@ function App() {
   // FIREBASE AUTH + SYNC
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
+      // Clear previous listeners on any auth change
+      clearListeners();
+
       try {
         if (currentUser) {
           // Only update user if it's a login event (avoid redundant updates)
@@ -110,7 +121,7 @@ function App() {
                  const userDocRef = doc(db, 'users', currentUser.uid);
                  
                  // Use snapshot listener for admin status AND cpf check to be reactive
-                 onSnapshot(userDocRef, (docSnap: any) => {
+                 const unsubUser = onSnapshot(userDocRef, (docSnap: any) => {
                     if (isLoggingOut.current) return; // Prevent redirect if logging out
 
                     let adminStatus = false;
@@ -144,52 +155,62 @@ function App() {
                     });
 
                  }, (err: any) => {
-                     // Permission denied expected if rules not set. Treat as non-admin.
+                     // IMPORTANT: Check isLoggingOut here too.
+                     // Permission denied happens on logout, we must NOT redirect to Welcome in that case.
+                     if (isLoggingOut.current) return;
+
                      console.warn("User/Admin check error:", err);
-                     // Fallback to Welcome if permissions fail to avoid lockout
+                     // Only fallback if NOT logging out
                      setCurrentView((prev) => {
                          if ([AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD].includes(prev)) return AppView.WELCOME;
                          return prev;
                      });
                  });
+                 unsubs.current.push(unsubUser);
 
                  // FAMILY
                  const familyRef = collection(db, 'users', currentUser.uid, 'family');
-                 onSnapshot(familyRef, (snap: any) => {
+                 const unsubFamily = onSnapshot(familyRef, (snap: any) => {
                    if (isLoggingOut.current) return;
                    const data = safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember));
                    setFamilyMembers(data);
                  }, (err: any) => console.warn("Family sync error (ignoring):", err));
+                 unsubs.current.push(unsubFamily);
 
                  // FAVORITES
                  const favRef = collection(db, 'users', currentUser.uid, 'favorites');
-                 onSnapshot(favRef, (s: any) => {
+                 const unsubFav = onSnapshot(favRef, (s: any) => {
                     if (isLoggingOut.current) return;
                     setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe)))
                  }, (err: any) => console.warn("Fav sync error (ignoring):", err));
+                 unsubs.current.push(unsubFav);
 
                  // HISTORY
                  const historyRef = collection(db, 'users', currentUser.uid, 'history');
-                 onSnapshot(historyRef, (s: any) => {
+                 const unsubHist = onSnapshot(historyRef, (s: any) => {
                      if (isLoggingOut.current) return;
                      setCookedHistory(safeMapDocs(s, d => d.data() as Recipe))
                  }, (err: any) => console.warn("History sync error (ignoring):", err));
+                 unsubs.current.push(unsubHist);
 
                  // SHOPPING
                  const shoppingRef = collection(db, 'users', currentUser.uid, 'shopping');
-                 onSnapshot(shoppingRef, (s: any) => {
+                 const unsubShop = onSnapshot(shoppingRef, (s: any) => {
                      if (isLoggingOut.current) return;
                      setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem)))
                  }, (err: any) => console.warn("Shopping sync error (ignoring):", err));
+                 unsubs.current.push(unsubShop);
 
                  // PANTRY
                  const pantryRef = doc(db, 'users', currentUser.uid, 'settings', 'pantry');
-                 onSnapshot(pantryRef, (s: any) => {
+                 const unsubPantry = onSnapshot(pantryRef, (s: any) => {
                      if (isLoggingOut.current || !s) return;
                      const exists = typeof s.exists === 'function' ? s.exists() : s.exists;
                      const data = typeof s.data === 'function' ? s.data() : s.data;
                      setPantryItems(exists && data ? data.items || [] : []);
                  }, (err: any) => console.warn("Pantry sync error (ignoring):", err));
+                 unsubs.current.push(unsubPantry);
+
              } catch (syncError) {
                  console.warn("Sync setup error:", syncError);
              }
@@ -219,7 +240,10 @@ function App() {
       }
     });
 
-    return unsubscribe;
+    return () => {
+        unsubscribe();
+        clearListeners();
+    };
   }, []); // Empty dependency array
 
   // ACTIVE PROFILES PERSISTENCE
@@ -263,6 +287,9 @@ function App() {
 
   const handleLogout = async () => {
       isLoggingOut.current = true;
+      // Immediately clear listeners to prevent race conditions during signout
+      clearListeners();
+      
       try {
           // 1. Clear Local Data
           localStorage.removeItem('pp_demo_mode');
@@ -277,6 +304,7 @@ function App() {
           setIsAdmin(false);
           setScanResult(null);
           setRecipes([]);
+          setFamilyMembers([]); // Clear sensitive data
           
           // 3. Force Navigation immediately
           setCurrentView(AppView.LOGIN);
