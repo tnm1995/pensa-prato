@@ -2,6 +2,7 @@
 
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { ScanResult, Recipe, FamilyMember, CookingMethod } from "../types";
+import { seasonalRecipesData } from "../data/staticRecipes";
 
 // Helper to safely get env vars without crashing if process is undefined
 const getSafeEnv = (key: string): string | undefined => {
@@ -361,6 +362,28 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
  * Generates recipes based on a CATEGORY/THEME (no fridge scanning required).
  */
 export const generateRecipesByCategory = async (category: string, activeProfiles?: FamilyMember[], cookingMethod?: CookingMethod): Promise<Recipe[]> => {
+    // 1. Check for Static "Database" Recipes first (Curated High Quality)
+    const normalizedCategory = Object.keys(seasonalRecipesData).find(
+      key => category.toLowerCase().includes(key.toLowerCase())
+    );
+
+    if (normalizedCategory) {
+      // Return static data with a slight delay to simulate "fetching"
+      await new Promise(resolve => setTimeout(resolve, 800));
+      let staticRecipes = [...seasonalRecipesData[normalizedCategory]];
+      
+      // Filter static recipes by profile dislikes (if any)
+      if (activeProfiles && activeProfiles.length > 0) {
+        const rawDislikes = activeProfiles.map(p => p.dislikes).filter(d => d && d.trim().length > 0).join(',');
+        const dislikeList = rawDislikes.split(',').map(s => s.trim()).filter(s => s);
+        if (dislikeList.length > 0) {
+           staticRecipes = postProcessRecipes(staticRecipes, dislikeList);
+        }
+      }
+      return staticRecipes;
+    }
+
+    // 2. Fallback to Gemini AI for other categories
     if (!apiKey) {
       return new Promise(resolve => setTimeout(() => resolve(getMockRecipes()), 1500));
     }
