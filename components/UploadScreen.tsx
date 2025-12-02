@@ -1,6 +1,7 @@
 
+
 import React, { useRef, useState } from 'react';
-import { Camera, Upload, Image as ImageIcon, ScanLine, Beaker, Wind, Flame, ChefHat, UtensilsCrossed, ChevronDown, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Camera, Upload, Image as ImageIcon, ScanLine, Beaker, Wind, Flame, ChefHat, UtensilsCrossed, ChevronDown, AlertCircle, ArrowLeft, Compass } from 'lucide-react';
 import { FamilyMember, CookingMethod } from '../types';
 
 interface UploadScreenProps {
@@ -12,6 +13,7 @@ interface UploadScreenProps {
   onChangeContext: () => void;
   error?: string | null;
   onBack: () => void;
+  onExploreClick: () => void;
 }
 
 export const UploadScreen: React.FC<UploadScreenProps> = ({ 
@@ -22,7 +24,8 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
     cookingMethod, 
     onChangeContext,
     error,
-    onBack
+    onBack,
+    onExploreClick
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -157,7 +160,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">O que tem na geladeira?</h1>
           <p className="text-sm text-gray-500 max-w-[260px] mx-auto leading-relaxed">
-            Tire uma foto dos seus ingredientes e nós criaremos a receita perfeita para <span className="font-bold text-emerald-600">{activeProfiles.length > 0 ? (activeProfiles.length === 1 ? activeProfiles[0].name : "todos") : "você"}</span>.
+            Tire uma foto dos seus ingredientes e nós criaremos a receita perfeita.
           </p>
         </div>
 
@@ -201,6 +204,23 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Explore Button (New) */}
+        <button 
+          onClick={onExploreClick}
+          className="w-full mt-4 bg-white hover:bg-emerald-50 border border-gray-200 hover:border-emerald-200 rounded-[1.5rem] p-4 flex items-center justify-between group transition-all shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+             <div className="p-2 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-purple-100 transition-colors">
+                 <Compass className="w-5 h-5" />
+             </div>
+             <div className="text-left">
+                 <h3 className="text-sm font-bold text-gray-800">Sem foto? Explore Receitas</h3>
+                 <p className="text-[10px] text-gray-500">Categorias, Festas e Ocasiões</p>
+             </div>
+          </div>
+          <ChevronDown className="w-4 h-4 text-gray-300 -rotate-90" />
+        </button>
 
         {/* Error Message Below Upload */}
         {error && (

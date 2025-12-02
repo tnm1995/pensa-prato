@@ -1,6 +1,8 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppView, FamilyMember, CookingMethod, ShoppingItem, Recipe, ScanResult } from './types';
-import { analyzeFridgeImage, generateRecipes, getMockScanResult, getMockRecipes } from './services/geminiService';
+import { analyzeFridgeImage, generateRecipes, getMockScanResult, getMockRecipes, generateRecipesByCategory } from './services/geminiService';
 import { UploadScreen } from './components/UploadScreen';
 import { LoadingScreen } from './components/LoadingScreen';
 import { ScanResults } from './components/ScanResults';
@@ -20,6 +22,7 @@ import { auth, db, onAuthStateChanged, signOut, collection, doc, onSnapshot, set
 import { SplashScreen } from './components/SplashScreen';
 import { AdminPanel } from './components/AdminPanel';
 import { CompleteProfileScreen } from './components/CompleteProfileScreen';
+import { ExploreScreen } from './components/ExploreScreen';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -512,6 +515,27 @@ function App() {
     }
   };
 
+  const handleSelectCategory = async (category: string) => {
+      setLoadingMode('recipes');
+      setCurrentView(AppView.ANALYZING);
+      
+      try {
+          let recipeSuggestions: Recipe[] = [];
+          if (isDemoMode) {
+             await new Promise(resolve => setTimeout(resolve, 1500));
+             recipeSuggestions = getMockRecipes();
+          } else {
+             recipeSuggestions = await generateRecipesByCategory(category, activeProfiles, cookingMethod);
+          }
+          setRecipes(recipeSuggestions);
+          setCurrentView(AppView.RECIPES);
+      } catch(err) {
+          console.error(err);
+          setError("Erro ao gerar sugestões. Tente novamente.");
+          setCurrentView(AppView.EXPLORE);
+      }
+  };
+
   const safeUserProfile = familyMembers.find(m => m.id === 'primary') || familyMembers[0];
 
   const showBottomMenu = ![
@@ -533,7 +557,8 @@ function App() {
       {currentView === AppView.FAMILY_SELECTION && <FamilySelectionScreen members={familyMembers} selectedMembers={activeProfiles} onToggleMember={m => setActiveProfiles(p => p.some(x => x.id === m.id) ? p.filter(x => x.id !== m.id) : [...p, m])} onSelectAll={() => setActiveProfiles(activeProfiles.length === familyMembers.length ? [] : [...familyMembers])} onContinue={() => setCurrentView(AppView.COOKING_METHOD)} onEditMember={m => { setMemberToEdit(m); setEditingReturnView(AppView.FAMILY_SELECTION); setCurrentView(AppView.PROFILE_EDITOR); }} onAddNew={() => { setMemberToEdit(undefined); setCurrentView(AppView.PROFILE_EDITOR); }} onBack={() => setCurrentView(AppView.WELCOME)} />}
       {currentView === AppView.COOKING_METHOD && <CookingMethodScreen onSelectMethod={m => { setCookingMethod(m); setCurrentView(AppView.UPLOAD); }} onBack={() => setCurrentView(activeProfiles.length > 0 ? AppView.FAMILY_SELECTION : AppView.WELCOME)} />}
       {currentView === AppView.PROFILE_EDITOR && <ProfileEditorScreen initialMember={memberToEdit} onSave={handleSaveMember} onCancel={() => setCurrentView(editingReturnView)} />}
-      {currentView === AppView.UPLOAD && <UploadScreen onFileSelected={handleFileSelect} onDemoClick={() => { setIsDemoMode(true); localStorage.setItem('pp_demo_mode', 'true'); setScanResult(getMockScanResult()); setCurrentView(AppView.RESULTS); }} onProfileClick={() => setCurrentView(AppView.PROFILE)} activeProfiles={activeProfiles} cookingMethod={cookingMethod} onChangeContext={() => setCurrentView(AppView.WELCOME)} error={error} onBack={() => setCurrentView(AppView.COOKING_METHOD)} />}
+      {currentView === AppView.UPLOAD && <UploadScreen onFileSelected={handleFileSelect} onDemoClick={() => { setIsDemoMode(true); localStorage.setItem('pp_demo_mode', 'true'); setScanResult(getMockScanResult()); setCurrentView(AppView.RESULTS); }} onProfileClick={() => setCurrentView(AppView.PROFILE)} activeProfiles={activeProfiles} cookingMethod={cookingMethod} onChangeContext={() => setCurrentView(AppView.WELCOME)} error={error} onBack={() => setCurrentView(AppView.COOKING_METHOD)} onExploreClick={() => setCurrentView(AppView.EXPLORE)} />}
+      {currentView === AppView.EXPLORE && <ExploreScreen onBack={() => setCurrentView(AppView.UPLOAD)} onSelectCategory={handleSelectCategory} />}
       
       {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={handleAddToShoppingList} onToggleItem={handleToggleShoppingItem} onRemoveItem={handleRemoveShoppingItem} onEditItem={handleEditShoppingItem} onClearList={handleClearShoppingList} onBack={() => setCurrentView(lastMainView)} />}
       
@@ -558,7 +583,7 @@ function App() {
 
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
       {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => { setImagePreview(null); setScanResult(null); setCurrentView(AppView.UPLOAD); }} />}
-      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(AppView.RESULTS)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} cookingMethod={cookingMethod} />}
+      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(recipes.length > 0 && scanResult ? AppView.RESULTS : AppView.EXPLORE)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} cookingMethod={cookingMethod} />}
       {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(AppView.RECIPES)} isFavorite={favoriteRecipes.some(r => r.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={(r) => handleRateRecipe(selectedRecipe, r)} shoppingList={shoppingList} onAddToShoppingList={handleAddToShoppingList} cookingMethod={cookingMethod} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
 
       {showBottomMenu && <BottomMenu currentView={currentView} activeTab={profileInitialTab} onNavigate={(v, tab) => { if (tab) setProfileInitialTab(tab); setCurrentView(v); }} />}

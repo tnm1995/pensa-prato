@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { ScanResult, Recipe, FamilyMember, CookingMethod } from "../types";
 
@@ -249,7 +250,7 @@ const postProcessRecipes = (recipes: Recipe[], dislikes: string[]): Recipe[] => 
 };
 
 /**
- * Generates recipe suggestions.
+ * Generates recipe suggestions based on ingredients.
  */
 export const generateRecipes = async (ingredients: string[], activeProfiles?: FamilyMember[], cookingMethod?: CookingMethod, pantryItems?: string[]): Promise<Recipe[]> => {
   if (!apiKey) {
@@ -346,6 +347,121 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
       }
     });
 
+    return processGeminiResponse(response, activeProfiles, dislikeList);
+  } catch (error: any) {
+    console.error("Error generating recipes:", error);
+    if (error.message?.includes("403") || error.message?.includes("API key")) {
+        return getMockRecipes();
+    }
+    throw new Error("Falha ao gerar receitas. Tente novamente.");
+  }
+};
+
+/**
+ * Generates recipes based on a CATEGORY/THEME (no fridge scanning required).
+ */
+export const generateRecipesByCategory = async (category: string, activeProfiles?: FamilyMember[], cookingMethod?: CookingMethod): Promise<Recipe[]> => {
+    if (!apiKey) {
+      return new Promise(resolve => setTimeout(() => resolve(getMockRecipes()), 1500));
+    }
+    
+    const model = "gemini-2.5-flash";
+  
+    let profileContext = "";
+    let restrictionRules = "";
+    
+    let methodInstruction = "Método: O mais tradicional para o prato ou adaptado ao doméstico.";
+    if (cookingMethod && cookingMethod !== CookingMethod.ANY) {
+       methodInstruction = `
+       MÉTODO PREFERENCIAL: ${cookingMethod}.
+       Tente sugerir pratos que funcionem bem no ${cookingMethod}.
+       Se for AirFryer: dê temperaturas (ex: 200°C) e tempos precisos.
+       `;
+    }
+  
+    let dislikeList: string[] = [];
+    if (activeProfiles && activeProfiles.length > 0) {
+      const names = activeProfiles.map(p => p.name).join(', ');
+      const rawDislikes = activeProfiles.map(p => p.dislikes).filter(d => d && d.trim().length > 0).join(',');
+      dislikeList = rawDislikes.split(',').map(s => s.trim()).filter(s => s);
+      const allRestrictions = [...new Set(activeProfiles.flatMap(p => p.restrictions))];
+      const hasBaby = activeProfiles.some(p => p.isChild || p.name.toLowerCase().includes('bebê') || p.restrictions.includes('Bebê (< 2 anos)'));
+  
+      profileContext = `
+      COZINHANDO PARA: ${names}
+      RESTRIÇÕES OBRIGATÓRIAS: ${allRestrictions.join(', ') || "Nenhuma"}
+      `;
+  
+      restrictionRules = `
+      INGREDIENTES PROIBIDOS: ${dislikeList.join(', ')}.
+      ${hasBaby ? "ALERTA BEBÊ: Receitas devem ser seguras para bebês (sem mel, pouco sal, texturas adequadas)." : ""}
+      `;
+    }
+  
+    const systemInstruction = `
+    Você é um Chef Profissional Criativo.
+    
+    TAREFA: Sugerir as 5 melhores receitas para a categoria/tema: "${category}".
+    
+    CONTEXTO: O usuário quer inspiração para "${category}". Não estamos limitados ao que tem na geladeira, o usuário pode ir comprar.
+    
+    ${methodInstruction}
+    ${profileContext}
+    ${restrictionRules}
+  
+    REGRAS:
+    1. SEJA TEMÁTICO: Se for "Festa Junina", sugira Pamonha, Canjica, Caldos. Se for "Páscoa", Bacalhau, Chocolate.
+    2. VARIABILIDADE: Sugira opções variadas dentro do tema (entrada, prato principal, sobremesa ou variações do prato).
+    3. INGREDIENTES: Liste todos os ingredientes necessários como "used_ingredients". Deixe "missing_ingredients" vazio, pois é uma sugestão de compra.
+    
+    FORMATO JSON OBRIGATÓRIO:
+    {
+      "recipes": [
+        {
+          "title": "Nome do Prato Temático",
+          "time_minutes": 45,
+          "difficulty": "Médio",
+          "servings": 4,
+          "used_ingredients": ["500g de item A", "2 latas de item B"], 
+          "missing_ingredients": [], 
+          "instructions": ["Passo 1...", "Passo 2..."],
+          "tags": ["${category}", "típico", "forno"]
+        }
+      ]
+    }
+    `;
+  
+    try {
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: `Quero 5 receitas incríveis para o tema: ${category}`,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.6, // Higher temp for creativity in suggestions
+          responseMimeType: "application/json",
+          safetySettings: [
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          ]
+        }
+      });
+  
+      return processGeminiResponse(response, activeProfiles, dislikeList);
+    } catch (error: any) {
+      console.error("Error generating category recipes:", error);
+      if (error.message?.includes("403") || error.message?.includes("API key")) {
+          return getMockRecipes();
+      }
+      throw new Error("Falha ao gerar sugestões. Tente novamente.");
+    }
+  };
+
+/**
+ * Shared helper to process Gemini JSON response
+ */
+const processGeminiResponse = (response: any, activeProfiles?: FamilyMember[], dislikeList: string[] = []): Recipe[] => {
     const text = response.text;
     if (!text) throw new Error("A IA não retornou texto.");
 
@@ -363,7 +479,6 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
           timers: r.timers || []
       }));
 
-      // Post process to remove dislikes if AI hallucinated
       if (activeProfiles && activeProfiles.length > 0) {
           recipes = postProcessRecipes(recipes, dislikeList);
       }
@@ -372,11 +487,4 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
        console.error("JSON Parse Error (Recipes):", parseError);
        throw new Error("Erro ao interpretar receitas.");
     }
-  } catch (error: any) {
-    console.error("Error generating recipes:", error);
-    if (error.message?.includes("403") || error.message?.includes("API key")) {
-        return getMockRecipes();
-    }
-    throw new Error("Falha ao gerar receitas. Tente novamente.");
-  }
-};
+}
