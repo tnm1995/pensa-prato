@@ -1,5 +1,6 @@
+
 import React, { useRef, useState } from 'react';
-import { Camera, Upload, Image as ImageIcon, ScanLine, Wind, Flame, ChefHat, UtensilsCrossed, ChevronDown, AlertCircle, ArrowLeft, Compass } from 'lucide-react';
+import { Camera, Upload, Image as ImageIcon, ScanLine, Wind, Flame, ChefHat, UtensilsCrossed, ChevronDown, AlertCircle, ArrowLeft, Compass, Zap } from 'lucide-react';
 import { FamilyMember, CookingMethod } from '../types';
 
 interface UploadScreenProps {
@@ -11,6 +12,9 @@ interface UploadScreenProps {
   error?: string | null;
   onBack: () => void;
   onExploreClick: () => void;
+  freeUsageCount: number;
+  maxFreeUses: number;
+  isPro: boolean;
 }
 
 export const UploadScreen: React.FC<UploadScreenProps> = ({ 
@@ -21,7 +25,10 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
     onChangeContext,
     error,
     onBack,
-    onExploreClick
+    onExploreClick,
+    freeUsageCount,
+    maxFreeUses,
+    isPro
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -80,6 +87,8 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
 
     return <img src={`https://ui-avatars.com/api/?name=${profile.name}&background=random&color=fff`} alt={profile.name} className="w-full h-full object-cover" />;
   };
+
+  const remaining = Math.max(0, maxFreeUses - freeUsageCount);
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-50 pb-24 relative overflow-hidden">
@@ -143,11 +152,22 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md px-6 z-10 mt-4">
         
         {/* Back Button Area */}
-        <div className="w-full flex justify-start mb-2">
+        <div className="w-full flex justify-between items-center mb-2">
             <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-all flex items-center gap-1">
                 <ArrowLeft className="w-5 h-5" />
                 <span className="text-xs font-bold">Voltar</span>
             </button>
+            
+            {/* Status Indicator (Pro/Free) */}
+            {isPro ? (
+                <div className="flex items-center gap-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-3 py-1 rounded-full text-[10px] font-bold shadow-sm">
+                    <Zap className="w-3 h-3 fill-current" /> PRO
+                </div>
+            ) : (
+                <div className="flex items-center gap-1 bg-gray-200 text-gray-600 px-3 py-1 rounded-full text-[10px] font-bold">
+                    {remaining} / {maxFreeUses} gratuitos
+                </div>
+            )}
         </div>
 
         <div className="text-center mb-8">

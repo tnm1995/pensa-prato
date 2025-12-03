@@ -1,10 +1,14 @@
 
 import React from 'react';
-import { ArrowLeft, Search, Calendar, Heart, Flame, Leaf, Coffee, Wine, Utensils } from 'lucide-react';
+import { ArrowLeft, Search, Calendar, Heart, Flame, Leaf, Coffee, Wine, Utensils, Lock } from 'lucide-react';
 
 interface ExploreScreenProps {
   onBack: () => void;
   onSelectCategory: (category: string) => void;
+  isPro: boolean;
+  usageCount: number;
+  maxFreeUses: number;
+  unlockedPacks: string[];
 }
 
 interface Category {
@@ -15,7 +19,14 @@ interface Category {
   bg: string;
 }
 
-export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onBack, onSelectCategory }) => {
+export const ExploreScreen: React.FC<ExploreScreenProps> = ({ 
+    onBack, 
+    onSelectCategory,
+    isPro,
+    usageCount,
+    maxFreeUses,
+    unlockedPacks
+}) => {
   
   const seasonalCategories: Category[] = [
     { id: 'Festa Junina', label: 'Festa Junina 🌽', icon: <Flame className="w-5 h-5" />, color: 'text-orange-600', bg: 'bg-orange-100' },
@@ -38,22 +49,41 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onBack, onSelectCa
     { id: 'Econômicas', label: 'Econômicas', icon: <span className="text-xl">💰</span>, color: 'text-gray-600', bg: 'bg-gray-100' },
   ];
 
+  // Logic to determine if a category is locked
+  const isLocked = (catId: string) => {
+      if (isPro) return false;
+      if (unlockedPacks.includes(catId)) return false;
+      if (usageCount < maxFreeUses) return false;
+      return true; // Locked if limit reached and not pro/owned
+  };
+
   const renderSection = (title: string, categories: Category[]) => (
     <div className="mb-8">
       <h3 className="text-lg font-bold text-gray-800 mb-4 px-2">{title}</h3>
       <div className="grid grid-cols-2 gap-3">
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => onSelectCategory(cat.id)}
-            className={`p-4 rounded-2xl border border-transparent hover:border-gray-200 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-3 bg-white active:scale-95 group h-32`}
-          >
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${cat.bg} ${cat.color} group-hover:scale-110 transition-transform`}>
-              {cat.icon}
-            </div>
-            <span className="font-bold text-sm text-gray-700 text-center leading-tight">{cat.label}</span>
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const locked = isLocked(cat.id);
+          return (
+            <button
+              key={cat.id}
+              onClick={() => onSelectCategory(cat.id)}
+              className={`relative p-4 rounded-2xl border border-transparent hover:border-gray-200 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-3 bg-white active:scale-95 group h-32 overflow-hidden`}
+            >
+              {locked && (
+                  <div className="absolute top-2 right-2 bg-gray-100 p-1.5 rounded-full z-10">
+                      <Lock className="w-3 h-3 text-gray-400" />
+                  </div>
+              )}
+              
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${cat.bg} ${cat.color} group-hover:scale-110 transition-transform ${locked ? 'opacity-50 grayscale' : ''}`}>
+                {cat.icon}
+              </div>
+              <span className={`font-bold text-sm text-gray-700 text-center leading-tight ${locked ? 'opacity-50' : ''}`}>{cat.label}</span>
+              
+              {/* Optional: Lock Overlay if desired, but subtle icon is cleaner */}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

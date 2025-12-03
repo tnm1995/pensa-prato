@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppView, FamilyMember, CookingMethod, ShoppingItem, Recipe, ScanResult } from './types';
 import { analyzeFridgeImage, generateRecipes, getMockScanResult, getMockRecipes, generateRecipesByCategory } from './services/geminiService';
@@ -21,6 +22,10 @@ import { SplashScreen } from './components/SplashScreen';
 import { AdminPanel } from './components/AdminPanel';
 import { CompleteProfileScreen } from './components/CompleteProfileScreen';
 import { ExploreScreen } from './components/ExploreScreen';
+import { Toast } from './components/Toast';
+import { SubscriptionModal } from './components/SubscriptionModal';
+
+const MAX_FREE_USES = 3;
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -43,6 +48,15 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // Paywall & Usage State
+  const [usageCount, setUsageCount] = useState(() => parseInt(localStorage.getItem('pp_usage_count') || '0'));
+  const [isPro, setIsPro] = useState(() => localStorage.getItem('pp_is_pro') === 'true');
+  const [unlockedPacks, setUnlockedPacks] = useState<string[]>(() => {
+      try { return JSON.parse(localStorage.getItem('pp_unlocked_packs') || '[]'); } catch { return []; }
+  });
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallContext, setPaywallContext] = useState<{ type: 'general' | 'category', id?: string }>({ type: 'general' });
+
   // Admin State - Controlled strictly by DB
   const [isAdmin, setIsAdmin] = useState(false);
   
@@ -57,10 +71,23 @@ function App() {
     }
     return false;
   });
+
+  // Toast State
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+      setToast({ message, type });
+      setTimeout(() => setToast(null), 3000);
+  };
   
   // Use a ref for isDemoMode to use inside useEffect without triggering re-subscriptions
   const isDemoModeRef = useRef(isDemoMode);
   useEffect(() => { isDemoModeRef.current = isDemoMode; }, [isDemoMode]);
+
+  // Persist usage data
+  useEffect(() => { localStorage.setItem('pp_usage_count', usageCount.toString()); }, [usageCount]);
+  useEffect(() => { localStorage.setItem('pp_is_pro', isPro.toString()); }, [isPro]);
+  useEffect(() => { localStorage.setItem('pp_unlocked_packs', JSON.stringify(unlockedPacks)); }, [unlockedPacks]);
 
   // Flag to prevent snapshot listeners from redirecting during logout process
   const isLoggingOut = useRef(false);
@@ -288,37 +315,27 @@ function App() {
 
   const handleLogout = async () => {
       isLoggingOut.current = true;
-      // Immediately clear listeners to prevent race conditions during signout
       clearListeners();
       
       try {
-          // 1. Clear Local Data
           localStorage.removeItem('pp_demo_mode');
           if (user?.uid) {
               localStorage.removeItem(`active_profiles_${user.uid}`);
           }
-
-          // 2. Reset App State immediately (Optimistic Update)
           setIsDemoMode(false);
           setUser(null); 
           setActiveProfiles([]);
           setIsAdmin(false);
           setScanResult(null);
           setRecipes([]);
-          setFamilyMembers([]); // Clear sensitive data
-          
-          // 3. Force Navigation immediately
+          setFamilyMembers([]);
           setCurrentView(AppView.LOGIN);
-          
-          // 4. Perform Firebase SignOut
           await signOut(auth);
       } catch (error) {
           console.error("Logout failed", error);
-          // Failsafe: force login view anyway
           setCurrentView(AppView.LOGIN);
           setUser(null);
       } finally {
-          // Reset flag after delay to ensure auth state has settled
           setTimeout(() => { isLoggingOut.current = false; }, 1000);
       }
   };
@@ -327,6 +344,7 @@ function App() {
     if (!user || !db) return;
     try {
         await setDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items });
+        showToast("Despensa atualizada!", "success");
     } catch(e) { console.error(e); }
   };
   
@@ -337,6 +355,7 @@ function App() {
         if (exists) return prev.map(m => m.id === memberToSave.id ? memberToSave : m);
         return [...prev, { ...memberToSave, id: Date.now().toString() }];
       });
+      showToast("Perfil salvo (Demo)", "success");
       if (currentView === AppView.PROFILE_EDITOR) setCurrentView(editingReturnView);
       return;
     }
@@ -353,7 +372,11 @@ function App() {
              const { id, ...data } = memberToSave; 
              await addDoc(collection(db, 'users', user.uid, 'family'), data);
         }
-    } catch (e) { console.error("Error saving member", e); }
+        showToast("Perfil salvo com sucesso!", "success");
+    } catch (e) { 
+        console.error("Error saving member", e);
+        showToast("Erro ao salvar perfil.", "error");
+    }
     if (currentView === AppView.PROFILE_EDITOR) setCurrentView(editingReturnView);
   };
 
@@ -362,6 +385,7 @@ function App() {
       setFamilyMembers(prev => prev.filter(m => m.id !== memberId));
       setActiveProfiles(prev => prev.filter(m => m.id !== memberId));
       setCurrentView(editingReturnView);
+      showToast("Perfil removido (Demo)", "info");
       return;
     }
 
@@ -369,12 +393,12 @@ function App() {
 
     try {
         await deleteDoc(doc(db, 'users', user.uid, 'family', memberId));
-        // Remove from active profiles state as well
         setActiveProfiles(prev => prev.filter(m => m.id !== memberId));
         setCurrentView(editingReturnView);
+        showToast("Perfil removido.", "info");
     } catch (e) {
         console.error("Error deleting member", e);
-        setError("Erro ao excluir perfil.");
+        showToast("Erro ao excluir perfil.", "error");
     }
   };
 
@@ -382,7 +406,11 @@ function App() {
     if (isDemoMode) {
         setFavoriteRecipes(prev => {
             const exists = prev.some(r => r.title === recipe.title);
-            if (exists) return prev.filter(r => r.title !== recipe.title);
+            if (exists) {
+                showToast("Removido dos favoritos", "info");
+                return prev.filter(r => r.title !== recipe.title);
+            }
+            showToast("Salvo nos favoritos!", "success");
             return [...prev, recipe];
         });
         return;
@@ -393,15 +421,18 @@ function App() {
         if (existing) {
             const docId = (existing as any)._firestoreId;
             if (docId) await deleteDoc(doc(db, 'users', user.uid, 'favorites', docId));
+            showToast("Removido dos favoritos", "info");
         } else {
             const dataToSave = { ...recipe, image: recipe.image || `https://picsum.photos/seed/${recipe.title.replace(/\s/g,'')}/600/400` };
             delete (dataToSave as any)._firestoreId; 
             await addDoc(collection(db, 'users', user.uid, 'favorites'), dataToSave);
+            showToast("Salvo nos favoritos!", "success");
         }
     } catch (e) { console.error(e); }
   };
 
   const handleFinishCooking = async (recipe: Recipe) => {
+    showToast("Receita concluída! Bom apetite!", "success");
     if (isDemoMode) {
         setCookedHistory(prev => [...prev, recipe]);
         return;
@@ -438,6 +469,7 @@ function App() {
   const handleAddToShoppingList = async (name: string, quantity: string = '') => {
     if (isDemoMode) {
         setShoppingList(prev => [...prev, { id: Date.now().toString(), name, quantity, checked: false }]);
+        showToast("Item adicionado à lista", "success");
         return;
     }
     if (!user || !db) return;
@@ -445,6 +477,7 @@ function App() {
         await addDoc(collection(db, 'users', user.uid, 'shopping'), {
             name, quantity, checked: false, createdAt: Date.now()
         });
+        showToast("Item adicionado à lista", "success");
     } catch (e) { console.error(e); }
   };
 
@@ -496,6 +529,14 @@ function App() {
 
   const handleFileSelect = async (file: File) => {
     if (!user && !isDemoMode) return;
+
+    // PAYWALL CHECK
+    if (!isPro && usageCount >= MAX_FREE_USES) {
+        setPaywallContext({ type: 'general' });
+        setShowPaywall(true);
+        return;
+    }
+
     setImagePreview(URL.createObjectURL(file));
     setLoadingMode('analyzing');
     setCurrentView(AppView.ANALYZING);
@@ -505,10 +546,15 @@ function App() {
       const result = await analyzeFridgeImage(file);
       setScanResult(result);
       setCurrentView(AppView.RESULTS);
+      
+      // Increment Usage (Simulated)
+      if (!isPro) setUsageCount(prev => prev + 1);
+
     } catch (err: any) {
       console.error(err);
       const message = err.message || "Não foi possível analisar a imagem. Tente novamente.";
       setError(message);
+      showToast(message, "error");
       setCurrentView(AppView.UPLOAD);
     }
   };
@@ -531,11 +577,20 @@ function App() {
     } catch(err) {
         console.error(err);
         setError("Erro ao gerar receitas. Tente novamente.");
+        showToast("Erro ao gerar receitas.", "error");
         setCurrentView(AppView.RESULTS);
     }
   };
 
   const handleSelectCategory = async (category: string) => {
+      // CHECK PAYWALL for Category
+      const isPackUnlocked = unlockedPacks.includes(category);
+      if (!isPro && !isPackUnlocked && usageCount >= MAX_FREE_USES) {
+          setPaywallContext({ type: 'category', id: category });
+          setShowPaywall(true);
+          return;
+      }
+
       setLoadingMode('recipes');
       setCurrentView(AppView.ANALYZING);
       setScanResult(null); // Important: Clear scan result to signal "Explore Mode"
@@ -550,10 +605,34 @@ function App() {
           }
           setRecipes(recipeSuggestions);
           setCurrentView(AppView.RECIPES);
+          
+          // Increment usage if not Pro and not previously bought
+          if (!isPro && !isPackUnlocked) {
+               setUsageCount(prev => prev + 1);
+          }
+
       } catch(err) {
           console.error(err);
           setError("Erro ao gerar sugestões. Tente novamente.");
+          showToast("Erro na conexão.", "error");
           setCurrentView(AppView.EXPLORE);
+      }
+  };
+
+  // Paywall Actions
+  const handleSubscribe = () => {
+      setIsPro(true);
+      setShowPaywall(false);
+      showToast("Bem-vindo ao Pensa Prato PRO! 👑", "success");
+  };
+
+  const handleBuyPack = () => {
+      if (paywallContext.type === 'category' && paywallContext.id) {
+          setUnlockedPacks(prev => [...prev, paywallContext.id!]);
+          setShowPaywall(false);
+          showToast(`Pacote "${paywallContext.id}" desbloqueado!`, "success");
+          // Optionally trigger the navigation immediately
+          handleSelectCategory(paywallContext.id!);
       }
   };
 
@@ -572,6 +651,16 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white font-sans antialiased text-gray-900 relative">
+      <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
+      
+      <SubscriptionModal 
+        isOpen={showPaywall} 
+        onClose={() => setShowPaywall(false)}
+        onSubscribe={handleSubscribe}
+        onBuyPack={handleBuyPack}
+        context={paywallContext}
+      />
+
       {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {/* Navigation handled by onSnapshot */}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
       {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={handleLogout} />}
       {currentView === AppView.FORGOT_PASSWORD && <ForgotPasswordScreen onBack={() => setCurrentView(AppView.LOGIN)} />}
@@ -582,10 +671,9 @@ function App() {
       {currentView === AppView.COOKING_METHOD && <CookingMethodScreen onSelectMethod={m => { setCookingMethod(m); setCurrentView(AppView.UPLOAD); }} onBack={() => setCurrentView(activeProfiles.length > 0 ? AppView.FAMILY_SELECTION : AppView.WELCOME)} />}
       {currentView === AppView.PROFILE_EDITOR && <ProfileEditorScreen initialMember={memberToEdit} onSave={handleSaveMember} onDelete={handleDeleteMember} onCancel={() => setCurrentView(editingReturnView)} />}
       
-      {/* Upload Screen - onDemoClick removed */}
-      {currentView === AppView.UPLOAD && <UploadScreen onFileSelected={handleFileSelect} onProfileClick={() => setCurrentView(AppView.PROFILE)} activeProfiles={activeProfiles} cookingMethod={cookingMethod} onChangeContext={() => setCurrentView(AppView.WELCOME)} error={error} onBack={() => setCurrentView(AppView.COOKING_METHOD)} onExploreClick={() => setCurrentView(AppView.EXPLORE)} />}
+      {currentView === AppView.UPLOAD && <UploadScreen onFileSelected={handleFileSelect} onProfileClick={() => setCurrentView(AppView.PROFILE)} activeProfiles={activeProfiles} cookingMethod={cookingMethod} onChangeContext={() => setCurrentView(AppView.WELCOME)} error={error} onBack={() => setCurrentView(AppView.COOKING_METHOD)} onExploreClick={() => setCurrentView(AppView.EXPLORE)} freeUsageCount={usageCount} maxFreeUses={MAX_FREE_USES} isPro={isPro} />}
       
-      {currentView === AppView.EXPLORE && <ExploreScreen onBack={() => setCurrentView(AppView.UPLOAD)} onSelectCategory={handleSelectCategory} />}
+      {currentView === AppView.EXPLORE && <ExploreScreen onBack={() => setCurrentView(AppView.UPLOAD)} onSelectCategory={handleSelectCategory} isPro={isPro} usageCount={usageCount} maxFreeUses={MAX_FREE_USES} unlockedPacks={unlockedPacks} />}
       
       {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={handleAddToShoppingList} onToggleItem={handleToggleShoppingItem} onRemoveItem={handleRemoveShoppingItem} onEditItem={handleEditShoppingItem} onClearList={handleClearShoppingList} onBack={() => setCurrentView(lastMainView)} />}
       
