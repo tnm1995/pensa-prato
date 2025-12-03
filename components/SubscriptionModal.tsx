@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Check, Star, Lock, X, Zap, Crown, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Check, Star, Lock, X, Zap, Crown, ExternalLink, CheckCircle2, Calendar } from 'lucide-react';
 import { Logo } from './Logo';
 
 interface SubscriptionModalProps {
@@ -9,7 +9,8 @@ interface SubscriptionModalProps {
   onSubscribe: () => void;
   onBuyPack: () => void;
   context?: { type: 'general' | 'category', id?: string };
-  checkoutUrlPro?: string;
+  checkoutUrlProMonthly?: string;
+  checkoutUrlProAnnual?: string;
   checkoutUrlPack?: string;
 }
 
@@ -19,7 +20,8 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   onSubscribe, 
   onBuyPack,
   context,
-  checkoutUrlPro = "#",
+  checkoutUrlProMonthly = "#",
+  checkoutUrlProAnnual = "#",
   checkoutUrlPack = "#"
 }) => {
   if (!isOpen) return null;
@@ -63,29 +65,39 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         <div className="p-6 space-y-4">
             
             {/* Option 1: PRO Subscription */}
-            <div className="space-y-2">
-                <button 
-                    onClick={() => handleOpenCheckout(checkoutUrlPro)}
-                    className="w-full relative group border-2 border-emerald-500 bg-emerald-50 hover:bg-emerald-100 transition-all rounded-2xl p-4 flex items-center gap-4 text-left shadow-sm hover:shadow-md"
-                >
-                    <div className="absolute -top-3 right-4 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide shadow-sm">
-                        Recomendado
-                    </div>
-                    <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
-                        <Zap className="w-6 h-6 text-white fill-current" />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-1">
-                            <h3 className="font-bold text-emerald-900">Assinar Pensa Prato PRO</h3>
-                            <ExternalLink className="w-3 h-3 text-emerald-600 opacity-50" />
+            <div className="space-y-3">
+                <div className="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-4">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm">
+                            <Zap className="w-5 h-5 text-white fill-current" />
                         </div>
-                        <p className="text-xs text-emerald-700">Scans ilimitados + Todas as categorias</p>
+                        <div>
+                            <h3 className="font-bold text-emerald-900 text-sm">Pensa Prato PRO</h3>
+                            <p className="text-xs text-emerald-700 leading-tight">Scans ilimitados + Todas as categorias</p>
+                        </div>
                     </div>
-                    <div className="text-right">
-                        <span className="block text-lg font-bold text-emerald-900">R$ 19,90</span>
-                        <span className="block text-[10px] text-emerald-600">/mês</span>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <button 
+                            onClick={() => handleOpenCheckout(checkoutUrlProMonthly)}
+                            className="flex flex-col items-center justify-center bg-white border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50/50 rounded-xl p-3 transition-all shadow-sm active:scale-95"
+                        >
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Mensal</span>
+                            <span className="text-lg font-bold text-emerald-700">R$ 19,90</span>
+                        </button>
+
+                        <button 
+                            onClick={() => handleOpenCheckout(checkoutUrlProAnnual)}
+                            className="relative flex flex-col items-center justify-center bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 rounded-xl p-3 transition-all shadow-md active:scale-95 text-white"
+                        >
+                            <div className="absolute -top-2 bg-yellow-400 text-yellow-900 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                ECONOMIZE
+                            </div>
+                            <span className="text-xs font-bold text-emerald-100 uppercase tracking-wide mb-1">Anual</span>
+                            <span className="text-lg font-bold">R$ 199,90</span>
+                        </button>
                     </div>
-                </button>
+                </div>
                 
                 <button 
                     onClick={onSubscribe}
@@ -135,7 +147,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             ) : (
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
                     <p className="text-xs text-gray-500 leading-relaxed">
-                        Ao assinar, você desbloqueia o <strong>Chef IA ilimitado</strong>, remove anúncios e tem acesso a todas as coleções sazonais (Natal, Páscoa, etc).
+                        Ao assinar, você desbloqueia o <strong>Chef IA ilimitado</strong>, remove anúncios e tem acesso a todas as coleções sazonais.
                     </p>
                 </div>
             )}

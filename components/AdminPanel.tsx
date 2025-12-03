@@ -43,8 +43,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
   const [subLoading, setSubLoading] = useState(false);
 
   // Monetization State
-  const [checkoutConfig, setCheckoutConfig] = useState<{ proUrl: string, packs: Record<string, string> }>({ 
-      proUrl: '', 
+  const [checkoutConfig, setCheckoutConfig] = useState<{ proMonthlyUrl: string, proAnnualUrl: string, packs: Record<string, string> }>({ 
+      proMonthlyUrl: '', 
+      proAnnualUrl: '',
       packs: {} 
   });
   const [loadingConfig, setLoadingConfig] = useState(false);
@@ -205,7 +206,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
           if (docSnap.exists) {
               const data = docSnap.data();
               setCheckoutConfig({
-                  proUrl: data.proUrl || '',
+                  proMonthlyUrl: data.proMonthlyUrl || data.proUrl || '', // Fallback backward compatibility
+                  proAnnualUrl: data.proAnnualUrl || '',
                   packs: data.packs || {}
               });
           }
@@ -462,20 +464,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                         
                         {/* Global PRO Link */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-200 ring-4 ring-emerald-50">
-                            <h3 className="text-lg font-bold text-emerald-800 mb-2 flex items-center gap-2">
-                                <Shield className="w-5 h-5" /> Assinatura PRO (Global)
+                            <h3 className="text-lg font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                                <Shield className="w-5 h-5" /> Links de Checkout PRO
                             </h3>
-                            <p className="text-sm text-gray-500 mb-4">Link para o checkout da assinatura mensal completa (libera tudo).</p>
+                            <p className="text-sm text-gray-500 mb-6">Configure os links para os planos de assinatura completa.</p>
                             
-                            <div className="flex items-center gap-3">
-                                <LinkIcon className="w-5 h-5 text-gray-400" />
-                                <input 
-                                    type="text" 
-                                    placeholder="https://pay.hotmart.com/..."
-                                    value={checkoutConfig.proUrl}
-                                    onChange={(e) => setCheckoutConfig({...checkoutConfig, proUrl: e.target.value})}
-                                    className="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 outline-none"
-                                />
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Plano Mensal (URL)</label>
+                                    <div className="flex items-center gap-3">
+                                        <LinkIcon className="w-5 h-5 text-gray-400" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="https://pay.hotmart.com/mensal"
+                                            value={checkoutConfig.proMonthlyUrl}
+                                            onChange={(e) => setCheckoutConfig({...checkoutConfig, proMonthlyUrl: e.target.value})}
+                                            className="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Plano Anual (URL)</label>
+                                    <div className="flex items-center gap-3">
+                                        <LinkIcon className="w-5 h-5 text-gray-400" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="https://pay.hotmart.com/anual"
+                                            value={checkoutConfig.proAnnualUrl}
+                                            onChange={(e) => setCheckoutConfig({...checkoutConfig, proAnnualUrl: e.target.value})}
+                                            className="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 outline-none"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

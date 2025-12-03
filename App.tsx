@@ -64,9 +64,10 @@ function App() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallContext, setPaywallContext] = useState<{ type: 'general' | 'category', id?: string }>({ type: 'general' });
 
-  // Dynamic Checkout Config
-  const [checkoutConfig, setCheckoutConfig] = useState<{ proUrl: string, packs: Record<string, string> }>({
-      proUrl: DEFAULT_CHECKOUT_PRO,
+  // Dynamic Checkout Config (Updated to support Monthly and Annual)
+  const [checkoutConfig, setCheckoutConfig] = useState<{ proMonthlyUrl: string, proAnnualUrl: string, packs: Record<string, string> }>({
+      proMonthlyUrl: DEFAULT_CHECKOUT_PRO,
+      proAnnualUrl: '',
       packs: {}
   });
 
@@ -151,7 +152,8 @@ function App() {
                 if (snap.exists) {
                     const data = snap.data();
                     setCheckoutConfig({
-                        proUrl: data.proUrl || DEFAULT_CHECKOUT_PRO,
+                        proMonthlyUrl: data.proMonthlyUrl || data.proUrl || DEFAULT_CHECKOUT_PRO,
+                        proAnnualUrl: data.proAnnualUrl || '',
                         packs: data.packs || {}
                     });
                 }
@@ -724,7 +726,8 @@ function App() {
         onSubscribe={handleSubscribe}
         onBuyPack={handleBuyPack}
         context={paywallContext}
-        checkoutUrlPro={checkoutConfig.proUrl}
+        checkoutUrlProMonthly={checkoutConfig.proMonthlyUrl}
+        checkoutUrlProAnnual={checkoutConfig.proAnnualUrl}
         checkoutUrlPack={activePackUrl}
       />
 
