@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Recipe, CookingMethod } from '../types';
 import { Clock, Users, Flame, ArrowLeft, ShoppingBasket, ChevronRight, Heart, CheckCircle2, Wind, ChefHat, UtensilsCrossed, Sparkles, Star } from 'lucide-react';
+import { ImageWithFallback } from './ImageWithFallback';
 
 interface RecipeListProps {
   recipes: Recipe[];
@@ -71,7 +71,12 @@ export const RecipeList: React.FC<RecipeListProps> = ({
               {isExplore && recipe.image && (
                  <div className="absolute top-0 right-0 w-24 h-full">
                      <div className="w-full h-full bg-gradient-to-l from-white/0 to-white absolute z-10"></div>
-                     <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity" />
+                     <ImageWithFallback 
+                        src={recipe.image} 
+                        alt={recipe.title} 
+                        className="w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity" 
+                        fallbackIcon="chef"
+                     />
                  </div>
               )}
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Recipe, ShoppingItem, CookingMethod } from '../types';
 import { 
@@ -31,6 +30,7 @@ import {
   Mic,
   Circle
 } from 'lucide-react';
+import { ImageWithFallback } from './ImageWithFallback';
 
 interface RecipeDetailProps {
   recipe: Recipe;
@@ -533,7 +533,12 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         {isExplore && recipe.image ? (
             <>
                 <div className="absolute inset-0">
-                    <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover" />
+                    <ImageWithFallback 
+                        src={recipe.image} 
+                        alt={recipe.title} 
+                        className="w-full h-full object-cover" 
+                        fallbackIcon="chef"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/30"></div>
                 </div>
             </>
