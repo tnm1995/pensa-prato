@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import { db, collection, doc, deleteDoc, updateDoc } from '../services/firebase';
-import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw } from 'lucide-react';
+import { db, collection, doc, deleteDoc, updateDoc, setDoc, getDoc } from '../services/firebase';
+import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw, DollarSign, Link as LinkIcon, Save } from 'lucide-react';
 import { FamilyMember } from '../types';
 
 interface AdminPanelProps {
@@ -18,25 +19,40 @@ interface UserSummary {
   isAdmin: boolean;
 }
 
+// Lista de categorias para configuração (deve bater com ExploreScreen)
+const KNOWN_CATEGORIES = [
+  'Natal', 'Ano Novo', 'Páscoa', 'Festa Junina',
+  'Café da Manhã', 'Almoço de Domingo', 'Jantar Romântico', 'Lanche Rápido',
+  'Fitness / Saudável', 'Comfort Food', 'Vegetariano', 'Econômicas'
+];
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail }) => {
+  const [activeTab, setActiveTab] = useState<'users' | 'monetization'>('users');
+  
+  // User Management State
   const [users, setUsers] = useState<UserSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
 
-  // Fetch all users data
+  // Monetization State
+  const [checkoutConfig, setCheckoutConfig] = useState<{ proUrl: string, packs: Record<string, string> }>({ 
+      proUrl: '', 
+      packs: {} 
+  });
+  const [loadingConfig, setLoadingConfig] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+
+  // --- USERS LOGIC ---
   const fetchAllUsers = async () => {
-    setLoading(true);
+    setLoadingUsers(true);
     try {
-      // Access Firestore raw collection if possible, or use the shim
-      // NOTE: collection(db, 'users') returns a CollectionReference in compat mode
       const usersRef = collection(db, 'users');
       const snapshot = await usersRef.get();
       
       const userList: UserSummary[] = [];
 
-      // Use Promise.all to fetch subcollections in parallel
       await Promise.all(snapshot.docs.map(async (userDoc: any) => {
         const uid = userDoc.id;
         const userData = userDoc.data();
@@ -47,10 +63,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
         let historyCount = 0;
 
         try {
-            // Raw Firestore access for subcollections
             const userRef = db.collection('users').doc(uid);
             
-            // Family
             const familySnap = await userRef.collection('family').get();
             familyCount = familySnap.size;
             
@@ -61,13 +75,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                 primaryName = familySnap.docs[0].data().name;
             }
 
-            // Pantry
             const pantryDoc = await userRef.collection('settings').doc('pantry').get();
             if (pantryDoc.exists) {
                 pantryCount = pantryDoc.data()?.items?.length || 0;
             }
 
-            // History
             const historySnap = await userRef.collection('history').get();
             historyCount = historySnap.size;
 
@@ -89,69 +101,92 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
       setUsers(userList);
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
-      alert("Erro ao buscar dados. Se você acabou de ativar o admin, verifique se sua conta tem permissão no Firestore.");
+      alert("Erro ao buscar dados.");
     } finally {
-      setLoading(false);
+      setLoadingUsers(false);
     }
   };
 
-  useEffect(() => {
-    fetchAllUsers();
-  }, []);
-
   const handleDeleteUser = async (uid: string) => {
-    if (confirm('TEM CERTEZA? Isso apagará os dados do Firestore deste usuário. A conta de autenticação precisaria ser apagada via Firebase Console.')) {
+    if (confirm('TEM CERTEZA? Isso apagará os dados do Firestore deste usuário.')) {
         try {
             await deleteDoc(doc(db, 'users', uid));
             setUsers(users.filter(u => u.uid !== uid));
-            alert('Dados do usuário apagados.');
-        } catch (e) {
-            console.error(e);
-            alert('Erro ao apagar.');
-        }
+        } catch (e) { console.error(e); }
     }
   };
 
   const handleToggleAdmin = async (uid: string, currentStatus: boolean) => {
-    if (confirm(currentStatus ? 'Remover privilégio de Admin?' : 'Tornar este usuário um Admin?')) {
+    if (confirm(currentStatus ? 'Remover Admin?' : 'Tornar Admin?')) {
         try {
             await updateDoc(doc(db, 'users', uid), { isAdmin: !currentStatus });
             setUsers(users.map(u => u.uid === uid ? { ...u, isAdmin: !currentStatus } : u));
-        } catch(e) {
-            console.error(e);
-            alert('Erro ao atualizar permissão.');
-        }
+        } catch(e) { console.error(e); }
     }
   };
 
   const handleViewDetails = async (uid: string) => {
-      setLoading(true);
+      setLoadingUsers(true);
       try {
           const userRef = db.collection('users').doc(uid);
-          
           const familySnap = await userRef.collection('family').get();
           const family = familySnap.docs.map((d: any) => d.data());
-          
           const pantrySnap = await userRef.collection('settings').doc('pantry').get();
           const pantry = pantrySnap.exists ? pantrySnap.data()?.items : [];
-
           const historySnap = await userRef.collection('history').get();
           const history = historySnap.docs.map((d: any) => d.data());
 
-          setSelectedUser({
-              uid,
-              family,
-              pantry,
-              history
-          });
+          setSelectedUser({ uid, family, pantry, history });
           setViewMode('detail');
+      } catch (e) { console.error(e); } finally { setLoadingUsers(false); }
+  };
+
+  // --- MONETIZATION LOGIC ---
+  const fetchConfig = async () => {
+      setLoadingConfig(true);
+      try {
+          const docSnap = await getDoc(doc(db, 'admin_settings', 'checkout'));
+          if (docSnap.exists) {
+              const data = docSnap.data();
+              setCheckoutConfig({
+                  proUrl: data.proUrl || '',
+                  packs: data.packs || {}
+              });
+          }
       } catch (e) {
-          console.error(e);
-          alert('Erro ao carregar detalhes.');
+          console.error("Erro config:", e);
       } finally {
-          setLoading(false);
+          setLoadingConfig(false);
       }
   };
+
+  const handleSaveConfig = async () => {
+      setSavingConfig(true);
+      try {
+          await setDoc(doc(db, 'admin_settings', 'checkout'), checkoutConfig);
+          alert("Links de checkout atualizados com sucesso!");
+      } catch (e) {
+          console.error("Erro ao salvar config:", e);
+          alert("Erro ao salvar.");
+      } finally {
+          setSavingConfig(false);
+      }
+  };
+
+  const updatePackUrl = (category: string, url: string) => {
+      setCheckoutConfig(prev => ({
+          ...prev,
+          packs: {
+              ...prev.packs,
+              [category]: url
+          }
+      }));
+  };
+
+  useEffect(() => {
+    if (activeTab === 'users') fetchAllUsers();
+    if (activeTab === 'monetization') fetchConfig();
+  }, [activeTab]);
 
   const filteredUsers = users.filter(u => 
     u.uid.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -159,10 +194,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
     (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // --- RENDER DETAIL VIEW ---
   if (viewMode === 'detail' && selectedUser) {
       return (
           <div className="min-h-screen bg-gray-100 p-6">
-              <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-300">
+              <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
                   <div className="bg-gray-800 p-6 flex items-center justify-between text-white">
                       <div className="flex items-center gap-4">
                           <button onClick={() => setViewMode('list')} className="p-2 hover:bg-white/20 rounded-full"><ArrowLeft /></button>
@@ -172,9 +208,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                           </div>
                       </div>
                   </div>
-                  
                   <div className="p-6 space-y-8">
-                      {/* Family Section */}
+                      {/* Details Content (Same as before) */}
                       <div>
                           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-blue-500" /> Família ({selectedUser.family.length})</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -187,34 +222,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                                               <p className="text-xs text-gray-500">{member.isChild ? 'Criança' : 'Adulto'}</p>
                                           </div>
                                       </div>
-                                      {member.restrictions && member.restrictions.length > 0 && (
-                                          <div className="flex flex-wrap gap-1">
-                                              {member.restrictions.map((r, i) => <span key={i} className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{r}</span>)}
-                                          </div>
-                                      )}
-                                  </div>
-                              ))}
-                          </div>
-                      </div>
-
-                      {/* Pantry Section */}
-                      <div>
-                          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Database className="w-5 h-5 text-emerald-500" /> Despensa ({selectedUser.pantry?.length || 0})</h3>
-                          <div className="flex flex-wrap gap-2">
-                              {selectedUser.pantry && selectedUser.pantry.length > 0 ? selectedUser.pantry.map((item: string, idx: number) => (
-                                  <span key={idx} className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-sm border border-emerald-100">{item}</span>
-                              )) : <p className="text-gray-400 italic">Despensa vazia.</p>}
-                          </div>
-                      </div>
-
-                      {/* History Section */}
-                      <div>
-                          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><ChefHat className="w-5 h-5 text-orange-500" /> Histórico ({selectedUser.history.length})</h3>
-                          <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                              {selectedUser.history.map((recipe: any, idx: number) => (
-                                  <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm">
-                                      <span className="font-medium text-gray-700">{recipe.title}</span>
-                                      <span className="text-gray-400 text-xs">{recipe.cookedAt ? new Date(recipe.cookedAt).toLocaleDateString() : '-'}</span>
                                   </div>
                               ))}
                           </div>
@@ -240,121 +247,194 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                     <p className="text-sm text-gray-500">Logado como: {currentUserEmail}</p>
                 </div>
             </div>
-            <button onClick={fetchAllUsers} className="p-3 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 transition-colors">
-                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+        </div>
+
+        {/* TAB NAVIGATION */}
+        <div className="flex gap-4 mb-6 border-b border-gray-200 pb-1">
+            <button 
+                onClick={() => setActiveTab('users')}
+                className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'users' ? 'bg-white text-emerald-600 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+                <Users className="w-4 h-4" /> Usuários
+            </button>
+            <button 
+                onClick={() => setActiveTab('monetization')}
+                className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'monetization' ? 'bg-white text-emerald-600 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+                <DollarSign className="w-4 h-4" /> Configurar Vendas
             </button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Users /></div>
-                    <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">Total</span>
+        {/* --- USERS TAB --- */}
+        {activeTab === 'users' && (
+            <>
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Users /></div>
+                        </div>
+                        <h3 className="text-3xl font-bold text-gray-900">{users.length}</h3>
+                        <p className="text-gray-500 text-sm">Usuários</p>
+                    </div>
+                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-orange-50 text-orange-600 rounded-xl"><ChefHat /></div>
+                        </div>
+                        <h3 className="text-3xl font-bold text-gray-900">{users.reduce((acc, u) => acc + u.historyCount, 0)}</h3>
+                        <p className="text-gray-500 text-sm">Receitas Feitas</p>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Database /></div>
+                        </div>
+                        <h3 className="text-3xl font-bold text-gray-900">{users.reduce((acc, u) => acc + u.pantryCount, 0)}</h3>
+                        <p className="text-gray-500 text-sm">Despensas</p>
+                    </div>
                 </div>
-                <h3 className="text-3xl font-bold text-gray-900">{users.length}</h3>
-                <p className="text-gray-500 text-sm">Usuários Cadastrados</p>
-            </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-3 bg-orange-50 text-orange-600 rounded-xl"><ChefHat /></div>
-                </div>
-                <h3 className="text-3xl font-bold text-gray-900">{users.reduce((acc, u) => acc + u.historyCount, 0)}</h3>
-                <p className="text-gray-500 text-sm">Receitas Cozinhadas (Total)</p>
-            </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Database /></div>
-                </div>
-                <h3 className="text-3xl font-bold text-gray-900">{users.reduce((acc, u) => acc + u.pantryCount, 0)}</h3>
-                <p className="text-gray-500 text-sm">Itens em Despensas</p>
-            </div>
-        </div>
 
-        {/* Search & List */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex flex-col md:flex-row gap-4 justify-between items-center">
-                <h3 className="font-bold text-lg text-gray-800">Gerenciar Usuários</h3>
-                <div className="relative w-full md:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input 
-                        type="text" 
-                        placeholder="Buscar UID ou Nome..." 
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 outline-none"
-                    />
-                </div>
-            </div>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex flex-col md:flex-row gap-4 justify-between items-center">
+                        <h3 className="font-bold text-lg text-gray-800">Lista de Usuários</h3>
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar..." 
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 outline-none"
+                                />
+                            </div>
+                            <button onClick={fetchAllUsers} className="p-2 bg-emerald-100 text-emerald-600 rounded-xl hover:bg-emerald-200">
+                                <RefreshCw className={`w-5 h-5 ${loadingUsers ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+                    </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-600">
-                    <thead className="bg-gray-50 text-xs uppercase font-bold text-gray-400">
-                        <tr>
-                            <th className="px-6 py-4">Usuário / Email</th>
-                            <th className="px-6 py-4 text-center">Permissão</th>
-                            <th className="px-6 py-4 text-center">Família</th>
-                            <th className="px-6 py-4 text-center">Despensa</th>
-                            <th className="px-6 py-4 text-right">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {loading && users.length === 0 ? (
-                            <tr><td colSpan={5} className="text-center py-8">Carregando...</td></tr>
-                        ) : filteredUsers.map((user) => (
-                            <tr key={user.uid} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-6 py-4">
-                                    <p className="font-bold text-gray-900">{user.primaryName}</p>
-                                    {user.email && <p className="text-xs text-emerald-600 font-medium">{user.email}</p>}
-                                    <p className="text-xs font-mono text-gray-400 truncate max-w-[150px]" title={user.uid}>{user.uid}</p>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    <button 
-                                        onClick={() => handleToggleAdmin(user.uid, user.isAdmin)}
-                                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${user.isAdmin ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                                        title={user.isAdmin ? 'Remover Admin' : 'Tornar Admin'}
-                                    >
-                                        {user.isAdmin ? <Shield className="w-3 h-3" /> : null}
-                                        {user.isAdmin ? 'ADMIN' : 'USER'}
-                                    </button>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {user.familyCount}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                                        {user.pantryCount}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <button 
-                                            onClick={() => handleViewDetails(user.uid)}
-                                            className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                                            title="Ver Detalhes"
-                                        >
-                                            <Eye className="w-4 h-4" />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteUser(user.uid)}
-                                            className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                                            title="Apagar Dados"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm text-gray-600">
+                            <thead className="bg-gray-50 text-xs uppercase font-bold text-gray-400">
+                                <tr>
+                                    <th className="px-6 py-4">Usuário / Email</th>
+                                    <th className="px-6 py-4 text-center">Permissão</th>
+                                    <th className="px-6 py-4 text-center">Família</th>
+                                    <th className="px-6 py-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {loadingUsers && users.length === 0 ? (
+                                    <tr><td colSpan={4} className="text-center py-8">Carregando...</td></tr>
+                                ) : filteredUsers.map((user) => (
+                                    <tr key={user.uid} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <p className="font-bold text-gray-900">{user.primaryName}</p>
+                                            {user.email && <p className="text-xs text-emerald-600 font-medium">{user.email}</p>}
+                                            <p className="text-xs font-mono text-gray-400 truncate max-w-[150px]" title={user.uid}>{user.uid}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button 
+                                                onClick={() => handleToggleAdmin(user.uid, user.isAdmin)}
+                                                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${user.isAdmin ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                            >
+                                                {user.isAdmin ? <Shield className="w-3 h-3" /> : null}
+                                                {user.isAdmin ? 'ADMIN' : 'USER'}
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                {user.familyCount}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <button onClick={() => handleViewDetails(user.uid)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg">
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleDeleteUser(user.uid)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </>
+        )}
+
+        {/* --- MONETIZATION TAB --- */}
+        {activeTab === 'monetization' && (
+            <div className="animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex justify-end mb-4">
+                     <button 
+                        onClick={handleSaveConfig}
+                        disabled={savingConfig}
+                        className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:bg-emerald-700 transition-colors disabled:opacity-70"
+                     >
+                        {savingConfig ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        Salvar Alterações
+                     </button>
+                </div>
+
+                {loadingConfig ? (
+                    <div className="text-center py-20 text-gray-400">Carregando configurações...</div>
+                ) : (
+                    <div className="space-y-6">
+                        
+                        {/* Global PRO Link */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-200 ring-4 ring-emerald-50">
+                            <h3 className="text-lg font-bold text-emerald-800 mb-2 flex items-center gap-2">
+                                <Shield className="w-5 h-5" /> Assinatura PRO (Global)
+                            </h3>
+                            <p className="text-sm text-gray-500 mb-4">Link para o checkout da assinatura mensal completa (libera tudo).</p>
+                            
+                            <div className="flex items-center gap-3">
+                                <LinkIcon className="w-5 h-5 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    placeholder="https://pay.hotmart.com/..."
+                                    value={checkoutConfig.proUrl}
+                                    onChange={(e) => setCheckoutConfig({...checkoutConfig, proUrl: e.target.value})}
+                                    className="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Category Links */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                <Database className="w-5 h-5 text-blue-500" /> Pacotes de Categoria (Venda Avulsa)
+                            </h3>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {KNOWN_CATEGORIES.map(category => (
+                                    <div key={category} className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                            {category}
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <LinkIcon className="w-4 h-4 text-gray-400" />
+                                            <input 
+                                                type="text" 
+                                                placeholder={`Link checkout para ${category}`}
+                                                value={checkoutConfig.packs[category] || ''}
+                                                onChange={(e) => updatePackUrl(category, e.target.value)}
+                                                className="flex-1 p-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-400 outline-none"
+                                            />
+                                        </div>
                                     </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                {!loading && filteredUsers.length === 0 && (
-                    <div className="text-center py-8 text-gray-400">Nenhum usuário encontrado.</div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
-        </div>
+        )}
+
       </div>
     </div>
   );

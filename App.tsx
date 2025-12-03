@@ -27,9 +27,9 @@ import { SubscriptionModal } from './components/SubscriptionModal';
 
 const MAX_FREE_USES = 3;
 
-// Links de Checkout Externo (Ex: Hotmart, Kiwify, Eduzz)
-const CHECKOUT_URL_PRO = "https://pay.hotmart.com/SEU_LINK_PRO_AQUI"; 
-const CHECKOUT_URL_PACK = "https://pay.kiwify.com.br/SEU_LINK_PACK_AQUI"; 
+// Default fallbacks in case DB fetch fails (Optional)
+const DEFAULT_CHECKOUT_PRO = "https://pay.hotmart.com/SEU_LINK_PRO_AQUI"; 
+const DEFAULT_CHECKOUT_PACK = "https://pay.hotmart.com/SEU_LINK_PACK_GENERICO"; 
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -60,6 +60,12 @@ function App() {
   });
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallContext, setPaywallContext] = useState<{ type: 'general' | 'category', id?: string }>({ type: 'general' });
+
+  // Dynamic Checkout Config
+  const [checkoutConfig, setCheckoutConfig] = useState<{ proUrl: string, packs: Record<string, string> }>({
+      proUrl: DEFAULT_CHECKOUT_PRO,
+      packs: {}
+  });
 
   // Admin State - Controlled strictly by DB
   const [isAdmin, setIsAdmin] = useState(false);
@@ -133,6 +139,23 @@ function App() {
     }, 2500); // 2.5 seconds timeout
     return () => clearTimeout(timer);
   }, [isAuthChecking, user, isDemoMode]);
+
+  // Fetch Admin Checkout Settings on load
+  useEffect(() => {
+    if (db) {
+        getDoc(doc(db, 'admin_settings', 'checkout'))
+            .then((snap: any) => {
+                if (snap.exists) {
+                    const data = snap.data();
+                    setCheckoutConfig({
+                        proUrl: data.proUrl || DEFAULT_CHECKOUT_PRO,
+                        packs: data.packs || {}
+                    });
+                }
+            })
+            .catch(err => console.warn("Could not fetch checkout settings (requires internet/permission)", err));
+    }
+  }, []);
 
   // FIREBASE AUTH + SYNC
   useEffect(() => {
@@ -651,6 +674,11 @@ function App() {
   // Derive isExplore from state: If showing recipes but no scanResult, it's explore mode
   const isExploreMode = currentView === AppView.RECIPES && scanResult === null;
 
+  // Calculate dynamic checkout URL for packs based on context
+  const activePackUrl = paywallContext.type === 'category' && paywallContext.id 
+      ? (checkoutConfig.packs[paywallContext.id] || DEFAULT_CHECKOUT_PACK)
+      : DEFAULT_CHECKOUT_PACK;
+
   if (isAuthChecking) return <SplashScreen />;
 
   return (
@@ -663,8 +691,8 @@ function App() {
         onSubscribe={handleSubscribe}
         onBuyPack={handleBuyPack}
         context={paywallContext}
-        checkoutUrlPro={CHECKOUT_URL_PRO}
-        checkoutUrlPack={CHECKOUT_URL_PACK}
+        checkoutUrlPro={checkoutConfig.proUrl}
+        checkoutUrlPack={activePackUrl}
       />
 
       {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {/* Navigation handled by onSnapshot */}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
