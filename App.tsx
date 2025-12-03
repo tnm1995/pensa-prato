@@ -1,4 +1,8 @@
 
+
+
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppView, FamilyMember, CookingMethod, ShoppingItem, Recipe, ScanResult } from './types';
 import { analyzeFridgeImage, generateRecipes, getMockScanResult, getMockRecipes, generateRecipesByCategory } from './services/geminiService';
@@ -24,6 +28,9 @@ import { CompleteProfileScreen } from './components/CompleteProfileScreen';
 import { ExploreScreen } from './components/ExploreScreen';
 import { Toast } from './components/Toast';
 import { SubscriptionModal } from './components/SubscriptionModal';
+import { LandingPage } from './components/LandingPage';
+import { TermsScreen } from './components/TermsScreen';
+import { PrivacyScreen } from './components/PrivacyScreen';
 
 const MAX_FREE_USES = 3;
 
@@ -39,7 +46,7 @@ function App() {
   const [cookedHistory, setCookedHistory] = useState<Recipe[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [pantryItems, setPantryItems] = useState<string[]>([]);
-  const [currentView, setCurrentView] = useState<AppView>(AppView.LOGIN);
+  const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING); // Changed default to LANDING
   const [lastMainView, setLastMainView] = useState<AppView>(AppView.WELCOME);
   const [activeProfiles, setActiveProfiles] = useState<FamilyMember[]>([]);
   const [cookingMethod, setCookingMethod] = useState<CookingMethod>(CookingMethod.ANY);
@@ -52,6 +59,9 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // Navigation History for Legal Pages
+  const [previousView, setPreviousView] = useState<AppView>(AppView.LANDING);
+
   // Paywall & Usage State
   const [usageCount, setUsageCount] = useState(() => parseInt(localStorage.getItem('pp_usage_count') || '0'));
   
@@ -137,7 +147,8 @@ function App() {
             console.warn("Auth check timed out. Forcing UI load.");
             setIsAuthChecking(false);
             if (!user && !isDemoMode) {
-                setCurrentView(AppView.LOGIN);
+                // If timed out and no user, show Landing Page
+                setCurrentView(AppView.LANDING);
             }
         }
     }, 2500); // 2.5 seconds timeout
@@ -170,7 +181,7 @@ function App() {
 
       try {
         if (currentUser) {
-          // Only update user if it's a login event (avoid redundant updates)
+          // User is logged in
           setUser(currentUser);
           setIsDemoMode(false);
           localStorage.removeItem('pp_demo_mode');
@@ -213,15 +224,18 @@ function App() {
 
                     // NAVIGATE based on status
                     setCurrentView((prev) => {
-                        // If user is currently in an auth flow screen or complete profile
-                        const isAuthFlow = [AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE].includes(prev);
+                        // Keep on Legal pages if viewing them
+                        if (prev === AppView.TERMS || prev === AppView.PRIVACY) return prev;
+
+                        // If user is currently in an auth flow screen or LANDING or complete profile
+                        const isAuthFlow = [AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE].includes(prev);
                         
                         // If they don't have a doc or don't have CPF, force COMPLETE_PROFILE
                         if (!hasDoc || !hasCpf) {
                              return AppView.COMPLETE_PROFILE;
                         }
 
-                        // If they have everything and are in auth flow, go to Welcome
+                        // If they have everything and are in auth flow/landing, go to Welcome
                         if (isAuthFlow) {
                              return AppView.WELCOME;
                         }
@@ -238,7 +252,7 @@ function App() {
                      console.warn("User/Admin check error:", err);
                      // Only fallback if NOT logging out
                      setCurrentView((prev) => {
-                         if ([AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD].includes(prev)) return AppView.WELCOME;
+                         if ([AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD].includes(prev)) return AppView.WELCOME;
                          return prev;
                      });
                  });
@@ -302,12 +316,16 @@ function App() {
                    setCurrentView(AppView.WELCOME);
                }
           } else {
-               setCurrentView(AppView.LOGIN);
+               // Default to LANDING page instead of LOGIN, unless already on legal pages
+               setCurrentView(prev => {
+                   if (prev === AppView.TERMS || prev === AppView.PRIVACY) return prev;
+                   return AppView.LANDING;
+               });
           }
         }
       } catch (err) {
         console.error("Auth initialization error:", err);
-        setCurrentView(AppView.LOGIN);
+        setCurrentView(AppView.LANDING);
       } finally {
         if (isInitialAuthCheck.current) {
             isInitialAuthCheck.current = false;
@@ -377,11 +395,11 @@ function App() {
           setScanResult(null);
           setRecipes([]);
           setFamilyMembers([]);
-          setCurrentView(AppView.LOGIN);
+          setCurrentView(AppView.LANDING); // Redirect to Landing Page
           await signOut(auth);
       } catch (error) {
           console.error("Logout failed", error);
-          setCurrentView(AppView.LOGIN);
+          setCurrentView(AppView.LANDING);
           setUser(null);
       } finally {
           setTimeout(() => { isLoggingOut.current = false; }, 1000);
@@ -698,12 +716,18 @@ function App() {
       }
   };
 
+  // --- Legal Navigation ---
+  const handleNavigateToLegal = (view: AppView) => {
+      setPreviousView(currentView);
+      setCurrentView(view);
+  };
+
   const safeUserProfile = familyMembers.find(m => m.id === 'primary') || familyMembers[0];
 
   const showBottomMenu = ![
-    AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE,
+    AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE,
     AppView.ANALYZING, AppView.RECIPE_DETAIL, AppView.PROFILE_EDITOR,
-    AppView.ADMIN_PANEL
+    AppView.ADMIN_PANEL, AppView.TERMS, AppView.PRIVACY
   ].includes(currentView);
 
   // Derive isExplore from state: If showing recipes but no scanResult, it's explore mode
@@ -731,8 +755,24 @@ function App() {
         checkoutUrlPack={activePackUrl}
       />
 
+      {currentView === AppView.LANDING && (
+        <LandingPage 
+            onLogin={() => setCurrentView(AppView.LOGIN)} 
+            onStartTest={() => setCurrentView(AppView.REGISTER)} 
+            onTermsClick={() => handleNavigateToLegal(AppView.TERMS)}
+            onPrivacyClick={() => handleNavigateToLegal(AppView.PRIVACY)}
+        />
+      )}
+      
       {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {/* Navigation handled by onSnapshot */}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
-      {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={handleLogout} />}
+      {currentView === AppView.REGISTER && (
+        <RegisterScreen 
+            onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} 
+            onNavigateToLogin={() => setCurrentView(AppView.LOGIN)}
+            onTermsClick={() => handleNavigateToLegal(AppView.TERMS)}
+            onPrivacyClick={() => handleNavigateToLegal(AppView.PRIVACY)} 
+        />
+      )}
       {currentView === AppView.FORGOT_PASSWORD && <ForgotPasswordScreen onBack={() => setCurrentView(AppView.LOGIN)} />}
       {currentView === AppView.COMPLETE_PROFILE && user && <CompleteProfileScreen onCompleteSuccess={() => setCurrentView(AppView.WELCOME)} initialName={user.displayName} initialEmail={user.email} onBack={handleLogout} />}
 
@@ -765,6 +805,9 @@ function App() {
       )}
       
       {currentView === AppView.ADMIN_PANEL && !isDemoMode && <AdminPanel onBack={() => setCurrentView(AppView.PROFILE)} currentUserEmail={user?.email} />}
+
+      {currentView === AppView.TERMS && <TermsScreen onBack={() => setCurrentView(previousView)} />}
+      {currentView === AppView.PRIVACY && <PrivacyScreen onBack={() => setCurrentView(previousView)} />}
 
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
       {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => { setImagePreview(null); setScanResult(null); setCurrentView(AppView.UPLOAD); }} />}

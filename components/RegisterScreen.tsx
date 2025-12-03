@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState } from 'react';
 import { User, Mail, Lock, FileText, ChevronLeft, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { auth, db, createUserWithEmailAndPassword, updateProfile, doc, setDoc, collection, query, where, getDocs } from '../services/firebase';
@@ -9,9 +11,16 @@ import { Logo } from './Logo';
 interface RegisterScreenProps {
   onRegisterSuccess: () => void;
   onNavigateToLogin: () => void;
+  onTermsClick?: () => void;
+  onPrivacyClick?: () => void;
 }
 
-export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSuccess, onNavigateToLogin }) => {
+export const RegisterScreen: React.FC<RegisterScreenProps> = ({ 
+    onRegisterSuccess, 
+    onNavigateToLogin,
+    onTermsClick,
+    onPrivacyClick
+}) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
@@ -65,8 +74,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
     setLoading(true);
     try {
       // 0. VERIFICAR CPF DUPLICADO (Best Effort)
-      // Se falhar por permissão (comum em Firestore seguro), permitimos o cadastro
-      // e deixamos as Security Rules do backend decidirem (se houver regra de unique).
       if (db) {
           try {
             const usersRef = collection(db, 'users');
@@ -81,7 +88,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
             }
           } catch (cpfCheckErr: any) {
               console.warn("Skipping client-side CPF check due to error (likely permissions):", cpfCheckErr);
-              // Proceed with registration
           }
       }
 
@@ -101,15 +107,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
                 if (attempts === 0) await new Promise(r => setTimeout(r, 500));
 
                 if (db) {
-                    // Create Root User Doc to store admin flag/metadata AND CPF
                     await setDoc(doc(db, 'users', user.uid), {
                         email: email,
-                        cpf: cpf, // Salva o CPF no root para verificação futura
+                        cpf: cpf, 
                         createdAt: new Date(),
-                        isAdmin: false // Default to false
+                        isAdmin: false 
                     }, { merge: true });
 
-                    // Perfil Principal
                     await setDoc(doc(db, 'users', user.uid, 'family', 'primary'), {
                         id: 'primary',
                         name: name.split(' ')[0],
@@ -119,14 +123,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
                         isChild: false
                     });
 
-                    // Despensa Vazia
                     await setDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), {
                         items: []
                     });
                     success = true;
-                    console.log("Banco de dados inicializado com sucesso.");
                 } else {
-                    console.warn("Firestore instance is null");
                     break; 
                 }
             } catch (dbError) {
@@ -147,7 +148,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
     } catch (err: any) {
       console.error(err);
       
-      // Clean up ghost session if auth succeeded but something else failed
       if (auth.currentUser) {
           try {
              auth.signOut();
@@ -288,7 +288,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onRegisterSucces
 
         <p className="mt-8 text-xs text-gray-400 text-center px-6 leading-relaxed">
             Ao criar uma conta, você concorda com nossos <br/>
-            <button className="text-[#00C853] font-bold hover:underline">Termos de Uso</button> e <button className="text-[#00C853] font-bold hover:underline">Política de Privacidade</button>.
+            <button onClick={onTermsClick} className="text-[#00C853] font-bold hover:underline">Termos de Uso</button> e <button onClick={onPrivacyClick} className="text-[#00C853] font-bold hover:underline">Política de Privacidade</button>.
         </p>
       </div>
     </div>
