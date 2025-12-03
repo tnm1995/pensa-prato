@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db, collection, doc, deleteDoc, updateDoc, setDoc, getDoc } from '../services/firebase';
-import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw, DollarSign, Link as LinkIcon, Save } from 'lucide-react';
+import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw, DollarSign, Link as LinkIcon, Save, Calendar, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { FamilyMember } from '../types';
 
 interface AdminPanelProps {
@@ -17,9 +17,11 @@ interface UserSummary {
   historyCount: number;
   primaryName: string;
   isAdmin: boolean;
+  isPro: boolean;
+  subscriptionExpiry?: any; // Firestore Timestamp
 }
 
-// Lista de categorias para configuração (deve bater com ExploreScreen)
+// Lista de categorias para configuração
 const KNOWN_CATEGORIES = [
   'Natal', 'Ano Novo', 'Páscoa', 'Festa Junina',
   'Café da Manhã', 'Almoço de Domingo', 'Jantar Romântico', 'Lanche Rápido',
@@ -35,6 +37,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
+
+  // Subscription Management Modal State
+  const [subModalUser, setSubModalUser] = useState<UserSummary | null>(null);
+  const [subLoading, setSubLoading] = useState(false);
 
   // Monetization State
   const [checkoutConfig, setCheckoutConfig] = useState<{ proUrl: string, packs: Record<string, string> }>({ 
@@ -94,7 +100,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
             familyCount,
             pantryCount,
             historyCount,
-            isAdmin: userData.isAdmin === true
+            isAdmin: userData.isAdmin === true,
+            isPro: userData.isPro === true,
+            subscriptionExpiry: userData.subscriptionExpiry
         });
       }));
 
@@ -139,6 +147,54 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
           setSelectedUser({ uid, family, pantry, history });
           setViewMode('detail');
       } catch (e) { console.error(e); } finally { setLoadingUsers(false); }
+  };
+
+  // --- SUBSCRIPTION LOGIC ---
+  const handleUpdateSubscription = async (type: 'free' | 'month' | 'year' | 'lifetime') => {
+      if (!subModalUser) return;
+      setSubLoading(true);
+      
+      try {
+          let updates: any = {};
+          const now = new Date();
+
+          if (type === 'free') {
+              updates = { isPro: false, subscriptionExpiry: null };
+          } else if (type === 'lifetime') {
+              updates = { isPro: true, subscriptionExpiry: null }; // Null expiry means lifetime
+          } else {
+              const expiryDate = new Date();
+              if (type === 'month') expiryDate.setDate(now.getDate() + 30);
+              if (type === 'year') expiryDate.setDate(now.getDate() + 365);
+              updates = { isPro: true, subscriptionExpiry: expiryDate };
+          }
+
+          await updateDoc(doc(db, 'users', subModalUser.uid), updates);
+          
+          // Update local list
+          setUsers(users.map(u => u.uid === subModalUser.uid ? { ...u, ...updates } : u));
+          setSubModalUser(null); // Close modal
+          alert("Assinatura atualizada!");
+      } catch (e) {
+          console.error("Erro ao atualizar assinatura", e);
+          alert("Erro ao salvar.");
+      } finally {
+          setSubLoading(false);
+      }
+  };
+
+  const formatExpiry = (expiry: any) => {
+      if (!expiry) return 'Vitalício';
+      // Handle Firestore Timestamp
+      const date = expiry.toDate ? expiry.toDate() : new Date(expiry);
+      return date.toLocaleDateString('pt-BR');
+  };
+
+  const isExpired = (user: UserSummary) => {
+      if (!user.isPro) return false;
+      if (!user.subscriptionExpiry) return false; // Lifetime
+      const expiry = user.subscriptionExpiry.toDate ? user.subscriptionExpiry.toDate() : new Date(user.subscriptionExpiry);
+      return expiry < new Date();
   };
 
   // --- MONETIZATION LOGIC ---
@@ -209,7 +265,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                       </div>
                   </div>
                   <div className="p-6 space-y-8">
-                      {/* Details Content (Same as before) */}
+                      {/* Details Content */}
                       <div>
                           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-blue-500" /> Família ({selectedUser.family.length})</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -269,7 +325,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
         {activeTab === 'users' && (
             <>
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Users /></div>
@@ -286,10 +342,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                     </div>
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                         <div className="flex justify-between items-start mb-4">
-                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Database /></div>
+                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><CheckCircle2 /></div>
                         </div>
-                        <h3 className="text-3xl font-bold text-gray-900">{users.reduce((acc, u) => acc + u.pantryCount, 0)}</h3>
-                        <p className="text-gray-500 text-sm">Despensas</p>
+                        <h3 className="text-3xl font-bold text-gray-900">{users.filter(u => u.isPro && !isExpired(u)).length}</h3>
+                        <p className="text-gray-500 text-sm">Assinantes Ativos</p>
                     </div>
                 </div>
 
@@ -319,14 +375,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                                 <tr>
                                     <th className="px-6 py-4">Usuário / Email</th>
                                     <th className="px-6 py-4 text-center">Permissão</th>
-                                    <th className="px-6 py-4 text-center">Família</th>
+                                    <th className="px-6 py-4 text-center">Assinatura</th>
                                     <th className="px-6 py-4 text-right">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {loadingUsers && users.length === 0 ? (
                                     <tr><td colSpan={4} className="text-center py-8">Carregando...</td></tr>
-                                ) : filteredUsers.map((user) => (
+                                ) : filteredUsers.map((user) => {
+                                    const expired = isExpired(user);
+                                    return (
                                     <tr key={user.uid} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4">
                                             <p className="font-bold text-gray-900">{user.primaryName}</p>
@@ -343,9 +401,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                {user.familyCount}
-                                            </span>
+                                            <div className="flex flex-col items-center">
+                                                {user.isPro ? (
+                                                    <>
+                                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${expired ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                            {expired ? 'Expirado' : 'PRO Ativo'}
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-400 mt-1">
+                                                            {user.subscriptionExpiry ? `Até ${formatExpiry(user.subscriptionExpiry)}` : 'Vitalício'}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-xs text-gray-400 font-medium bg-gray-100 px-2 py-0.5 rounded-full">Gratuito</span>
+                                                )}
+                                                <button 
+                                                    onClick={() => setSubModalUser(user)}
+                                                    className="text-[10px] text-blue-500 hover:underline mt-1"
+                                                >
+                                                    Gerenciar
+                                                </button>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
@@ -358,7 +433,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
+                                )})}
                             </tbody>
                         </table>
                     </div>
@@ -436,6 +511,73 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
         )}
 
       </div>
+
+      {/* MODAL: GERENCIAR ASSINATURA */}
+      {subModalUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
+                  <div className="bg-gray-800 p-4 text-white flex justify-between items-center">
+                      <h3 className="font-bold flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400" /> 
+                          Assinatura de {subModalUser.primaryName.split(' ')[0]}
+                      </h3>
+                      <button onClick={() => setSubModalUser(null)} className="p-1 hover:bg-white/20 rounded-full"><XCircle className="w-5 h-5" /></button>
+                  </div>
+                  <div className="p-6 space-y-3">
+                      <p className="text-sm text-gray-500 mb-4">Selecione uma ação para alterar o status deste usuário:</p>
+                      
+                      <button 
+                        onClick={() => handleUpdateSubscription('free')}
+                        disabled={subLoading}
+                        className="w-full p-3 rounded-xl border border-gray-200 hover:bg-red-50 hover:border-red-200 text-left flex items-center gap-3 transition-colors"
+                      >
+                          <div className="p-2 bg-gray-100 rounded-lg"><XCircle className="w-5 h-5 text-gray-500" /></div>
+                          <div>
+                              <p className="font-bold text-gray-800">Remover Assinatura</p>
+                              <p className="text-xs text-gray-500">Voltar para Gratuito</p>
+                          </div>
+                      </button>
+
+                      <button 
+                        onClick={() => handleUpdateSubscription('month')}
+                        disabled={subLoading}
+                        className="w-full p-3 rounded-xl border border-gray-200 hover:bg-emerald-50 hover:border-emerald-200 text-left flex items-center gap-3 transition-colors"
+                      >
+                          <div className="p-2 bg-emerald-100 rounded-lg"><Calendar className="w-5 h-5 text-emerald-600" /></div>
+                          <div>
+                              <p className="font-bold text-gray-800">Adicionar 30 Dias</p>
+                              <p className="text-xs text-gray-500">Plano Mensal</p>
+                          </div>
+                      </button>
+
+                      <button 
+                        onClick={() => handleUpdateSubscription('year')}
+                        disabled={subLoading}
+                        className="w-full p-3 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-200 text-left flex items-center gap-3 transition-colors"
+                      >
+                          <div className="p-2 bg-blue-100 rounded-lg"><Calendar className="w-5 h-5 text-blue-600" /></div>
+                          <div>
+                              <p className="font-bold text-gray-800">Adicionar 1 Ano</p>
+                              <p className="text-xs text-gray-500">Plano Anual</p>
+                          </div>
+                      </button>
+
+                       <button 
+                        onClick={() => handleUpdateSubscription('lifetime')}
+                        disabled={subLoading}
+                        className="w-full p-3 rounded-xl border border-gray-200 hover:bg-purple-50 hover:border-purple-200 text-left flex items-center gap-3 transition-colors"
+                      >
+                          <div className="p-2 bg-purple-100 rounded-lg"><Clock className="w-5 h-5 text-purple-600" /></div>
+                          <div>
+                              <p className="font-bold text-gray-800">Vitalício</p>
+                              <p className="text-xs text-gray-500">Sem data de expiração</p>
+                          </div>
+                      </button>
+                  </div>
+                  {subLoading && <div className="p-2 bg-gray-50 text-center text-xs text-gray-500 animate-pulse">Atualizando...</div>}
+              </div>
+          </div>
+      )}
     </div>
   );
 };

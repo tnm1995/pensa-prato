@@ -54,7 +54,10 @@ function App() {
   
   // Paywall & Usage State
   const [usageCount, setUsageCount] = useState(() => parseInt(localStorage.getItem('pp_usage_count') || '0'));
-  const [isPro, setIsPro] = useState(() => localStorage.getItem('pp_is_pro') === 'true');
+  
+  // Subscription State controlled by Firestore now
+  const [isPro, setIsPro] = useState(false);
+  
   const [unlockedPacks, setUnlockedPacks] = useState<string[]>(() => {
       try { return JSON.parse(localStorage.getItem('pp_unlocked_packs') || '[]'); } catch { return []; }
   });
@@ -96,7 +99,7 @@ function App() {
 
   // Persist usage data
   useEffect(() => { localStorage.setItem('pp_usage_count', usageCount.toString()); }, [usageCount]);
-  useEffect(() => { localStorage.setItem('pp_is_pro', isPro.toString()); }, [isPro]);
+  // Removed local storage persistence for isPro as it now comes from Firestore
   useEffect(() => { localStorage.setItem('pp_unlocked_packs', JSON.stringify(unlockedPacks)); }, [unlockedPacks]);
 
   // Flag to prevent snapshot listeners from redirecting during logout process
@@ -172,7 +175,7 @@ function App() {
           
           if (db) {
              try {
-                 // 1. Check if user needs to complete profile (CPF Check)
+                 // 1. Check if user needs to complete profile (CPF Check) AND Subscription Status
                  const userDocRef = doc(db, 'users', currentUser.uid);
                  
                  // Use snapshot listener for admin status AND cpf check to be reactive
@@ -182,13 +185,29 @@ function App() {
                     let adminStatus = false;
                     let hasDoc = docSnap && docSnap.exists;
                     let hasCpf = false;
+                    let proStatus = false;
                     
                     if (hasDoc) {
                         const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
                         if (data?.isAdmin === true) adminStatus = true;
                         if (data?.cpf) hasCpf = true;
+
+                        // Check Pro Status & Expiry
+                        if (data?.isPro) {
+                            proStatus = true;
+                            // Check expiry if exists
+                            if (data.subscriptionExpiry) {
+                                const now = new Date().getTime();
+                                const expiry = data.subscriptionExpiry.toMillis ? data.subscriptionExpiry.toMillis() : new Date(data.subscriptionExpiry).getTime();
+                                if (expiry < now) {
+                                    proStatus = false; // Expired
+                                    console.log("Subscription expired");
+                                }
+                            }
+                        }
                     }
                     setIsAdmin(adminStatus);
+                    setIsPro(proStatus);
 
                     // NAVIGATE based on status
                     setCurrentView((prev) => {
@@ -647,10 +666,24 @@ function App() {
   };
 
   // Paywall Actions
-  const handleSubscribe = () => {
-      setIsPro(true);
-      setShowPaywall(false);
-      showToast("Bem-vindo ao Pensa Prato PRO! 👑", "success");
+  const handleSubscribe = async () => {
+      // Simulation: Grant 30 days of Pro immediately
+      if (!user) return;
+      try {
+          const expiry = new Date();
+          expiry.setDate(expiry.getDate() + 30);
+          
+          await updateDoc(doc(db, 'users', user.uid), {
+              isPro: true,
+              subscriptionExpiry: expiry
+          });
+          
+          setShowPaywall(false);
+          showToast("Pagamento confirmado! Bem-vindo ao PRO! 👑", "success");
+      } catch (e) {
+          console.error("Subscription update error", e);
+          showToast("Erro ao confirmar assinatura.", "error");
+      }
   };
 
   const handleBuyPack = () => {
