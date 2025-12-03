@@ -42,8 +42,9 @@ export const RecipeList: React.FC<RecipeListProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-8">
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Header Fixo no Topo */}
+      <div className="sticky top-0 z-50 bg-white shadow-sm w-full">
         <div className="flex items-center p-4">
           <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full mr-2 transition-colors">
             <ArrowLeft className="w-6 h-6 text-gray-600" />
@@ -55,7 +56,8 @@ export const RecipeList: React.FC<RecipeListProps> = ({
         </div>
       </div>
 
-      <div className="p-4 space-y-3">
+      {/* Lista de Receitas */}
+      <div className="flex-1 p-4 space-y-3 pb-24">
         {recipes.map((recipe, idx) => {
           const fav = isFavorite(recipe);
           const methodInfo = getMethodInfo(recipe);
