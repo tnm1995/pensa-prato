@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Check, Star, Lock, X, Zap, Crown } from 'lucide-react';
+import { Check, Star, Lock, X, Zap, Crown, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { Logo } from './Logo';
 
 interface SubscriptionModalProps {
@@ -9,6 +9,8 @@ interface SubscriptionModalProps {
   onSubscribe: () => void;
   onBuyPack: () => void;
   context?: { type: 'general' | 'category', id?: string };
+  checkoutUrlPro?: string;
+  checkoutUrlPack?: string;
 }
 
 export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ 
@@ -16,11 +18,17 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   onClose, 
   onSubscribe, 
   onBuyPack,
-  context 
+  context,
+  checkoutUrlPro = "#",
+  checkoutUrlPack = "#"
 }) => {
   if (!isOpen) return null;
 
   const isCategoryContext = context?.type === 'category' && context.id;
+
+  const handleOpenCheckout = (url: string) => {
+      window.open(url, '_blank');
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -55,28 +63,40 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         <div className="p-6 space-y-4">
             
             {/* Option 1: PRO Subscription */}
-            <button 
-                onClick={onSubscribe}
-                className="w-full relative group border-2 border-emerald-500 bg-emerald-50 hover:bg-emerald-100 transition-all rounded-2xl p-4 flex items-center gap-4 text-left shadow-sm hover:shadow-md"
-            >
-                <div className="absolute -top-3 right-4 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide shadow-sm">
-                    Recomendado
-                </div>
-                <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
-                    <Zap className="w-6 h-6 text-white fill-current" />
-                </div>
-                <div className="flex-1">
-                    <h3 className="font-bold text-emerald-900">Pensa Prato PRO</h3>
-                    <p className="text-xs text-emerald-700">Scans ilimitados + Todas as categorias</p>
-                </div>
-                <div className="text-right">
-                    <span className="block text-lg font-bold text-emerald-900">R$ 19,90</span>
-                    <span className="block text-[10px] text-emerald-600">/mês</span>
-                </div>
-            </button>
+            <div className="space-y-2">
+                <button 
+                    onClick={() => handleOpenCheckout(checkoutUrlPro)}
+                    className="w-full relative group border-2 border-emerald-500 bg-emerald-50 hover:bg-emerald-100 transition-all rounded-2xl p-4 flex items-center gap-4 text-left shadow-sm hover:shadow-md"
+                >
+                    <div className="absolute -top-3 right-4 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide shadow-sm">
+                        Recomendado
+                    </div>
+                    <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                        <Zap className="w-6 h-6 text-white fill-current" />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-1">
+                            <h3 className="font-bold text-emerald-900">Assinar Pensa Prato PRO</h3>
+                            <ExternalLink className="w-3 h-3 text-emerald-600 opacity-50" />
+                        </div>
+                        <p className="text-xs text-emerald-700">Scans ilimitados + Todas as categorias</p>
+                    </div>
+                    <div className="text-right">
+                        <span className="block text-lg font-bold text-emerald-900">R$ 19,90</span>
+                        <span className="block text-[10px] text-emerald-600">/mês</span>
+                    </div>
+                </button>
+                
+                <button 
+                    onClick={onSubscribe}
+                    className="w-full text-center text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                >
+                    <CheckCircle2 className="w-3 h-3" /> Já realizei o pagamento (Liberar Acesso)
+                </button>
+            </div>
 
             {/* Separator */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 py-1">
                 <div className="h-px bg-gray-200 flex-1"></div>
                 <span className="text-xs font-bold text-gray-400 uppercase">Ou</span>
                 <div className="h-px bg-gray-200 flex-1"></div>
@@ -84,22 +104,34 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
             {/* Option 2: Single Pack (Only if category context) */}
             {isCategoryContext ? (
-                <button 
-                    onClick={onBuyPack}
-                    className="w-full border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 transition-all rounded-2xl p-4 flex items-center gap-4 text-left"
-                >
-                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                        <Lock className="w-5 h-5 text-gray-500" />
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="font-bold text-gray-800">Liberar "{context.id}"</h3>
-                        <p className="text-xs text-gray-500">Acesso vitalício a esta categoria</p>
-                    </div>
-                    <div className="text-right">
-                        <span className="block text-lg font-bold text-gray-800">R$ 4,90</span>
-                        <span className="block text-[10px] text-gray-400">única vez</span>
-                    </div>
-                </button>
+                <div className="space-y-2">
+                    <button 
+                        onClick={() => handleOpenCheckout(checkoutUrlPack)}
+                        className="w-full border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 transition-all rounded-2xl p-4 flex items-center gap-4 text-left"
+                    >
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                            <Lock className="w-5 h-5 text-gray-500" />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-1">
+                                <h3 className="font-bold text-gray-800">Comprar "{context.id}"</h3>
+                                <ExternalLink className="w-3 h-3 text-gray-400" />
+                            </div>
+                            <p className="text-xs text-gray-500">Acesso vitalício a esta categoria</p>
+                        </div>
+                        <div className="text-right">
+                            <span className="block text-lg font-bold text-gray-800">R$ 4,90</span>
+                            <span className="block text-[10px] text-gray-400">única vez</span>
+                        </div>
+                    </button>
+
+                    <button 
+                        onClick={onBuyPack}
+                        className="w-full text-center text-xs font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                        <CheckCircle2 className="w-3 h-3" /> Já realizei o pagamento (Liberar Pacote)
+                    </button>
+                </div>
             ) : (
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
                     <p className="text-xs text-gray-500 leading-relaxed">
@@ -108,8 +140,8 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 </div>
             )}
 
-            <p className="text-[10px] text-center text-gray-400 mt-4">
-                Cobrança segura via Google Play / App Store. Cancele quando quiser.
+            <p className="text-[10px] text-center text-gray-400 mt-4 px-4">
+                Pagamento seguro processado externamente. O acesso é liberado após a confirmação.
             </p>
         </div>
       </div>

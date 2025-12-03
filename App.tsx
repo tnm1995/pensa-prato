@@ -27,6 +27,10 @@ import { SubscriptionModal } from './components/SubscriptionModal';
 
 const MAX_FREE_USES = 3;
 
+// Links de Checkout Externo (Ex: Hotmart, Kiwify, Eduzz)
+const CHECKOUT_URL_PRO = "https://pay.hotmart.com/SEU_LINK_PRO_AQUI"; 
+const CHECKOUT_URL_PACK = "https://pay.kiwify.com.br/SEU_LINK_PACK_AQUI"; 
+
 function App() {
   const [user, setUser] = useState<any>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -659,6 +663,8 @@ function App() {
         onSubscribe={handleSubscribe}
         onBuyPack={handleBuyPack}
         context={paywallContext}
+        checkoutUrlPro={CHECKOUT_URL_PRO}
+        checkoutUrlPack={CHECKOUT_URL_PACK}
       />
 
       {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {/* Navigation handled by onSnapshot */}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
