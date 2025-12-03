@@ -1,12 +1,9 @@
-
-
 import React, { useRef, useState } from 'react';
-import { Camera, Upload, Image as ImageIcon, ScanLine, Beaker, Wind, Flame, ChefHat, UtensilsCrossed, ChevronDown, AlertCircle, ArrowLeft, Compass } from 'lucide-react';
+import { Camera, Upload, Image as ImageIcon, ScanLine, Wind, Flame, ChefHat, UtensilsCrossed, ChevronDown, AlertCircle, ArrowLeft, Compass } from 'lucide-react';
 import { FamilyMember, CookingMethod } from '../types';
 
 interface UploadScreenProps {
   onFileSelected: (file: File) => void;
-  onDemoClick: () => void;
   onProfileClick: () => void;
   activeProfiles: FamilyMember[];
   cookingMethod: CookingMethod;
@@ -18,7 +15,6 @@ interface UploadScreenProps {
 
 export const UploadScreen: React.FC<UploadScreenProps> = ({ 
     onFileSelected, 
-    onDemoClick, 
     onProfileClick, 
     activeProfiles, 
     cookingMethod, 
@@ -229,15 +225,6 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
                 <span>{error}</span>
             </div>
         )}
-
-        {/* Demo Button */}
-        <button 
-          onClick={onDemoClick}
-          className="mt-6 flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-full transition-colors"
-        >
-          <Beaker className="w-3 h-3" />
-          Modo Demonstração
-        </button>
       </div>
     </div>
   );
