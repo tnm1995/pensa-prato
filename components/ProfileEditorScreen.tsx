@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { FamilyMember } from '../types';
-import { ArrowLeft, Save, User, X, Baby, Camera, Image as ImageIcon, Smile, ChevronDown, ChevronUp, Utensils, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, User, X, Baby, Camera, Image as ImageIcon, Smile, ChevronDown, ChevronUp, Utensils, Loader2, Trash2 } from 'lucide-react';
 
 interface ProfileEditorScreenProps {
   onSave: (member: FamilyMember) => void;
   onCancel: () => void;
+  onDelete?: (id: string) => void;
   initialMember?: FamilyMember; // Optional for editing
 }
 
@@ -22,7 +23,7 @@ const EMOJI_OPTIONS = [
   "😎", "🤓", "🤠", "🥳", "🤖", "👽", "👻"
 ];
 
-export const ProfileEditorScreen: React.FC<ProfileEditorScreenProps> = ({ onSave, onCancel, initialMember }) => {
+export const ProfileEditorScreen: React.FC<ProfileEditorScreenProps> = ({ onSave, onCancel, onDelete, initialMember }) => {
   const [name, setName] = useState(initialMember?.name || '');
   const [avatar, setAvatar] = useState(initialMember?.avatar || '');
   const [dislikes, setDislikes] = useState(initialMember?.dislikes || '');
@@ -113,6 +114,17 @@ export const ProfileEditorScreen: React.FC<ProfileEditorScreenProps> = ({ onSave
     setIsSaving(false);
   };
 
+  const handleDelete = () => {
+      if (!initialMember || !onDelete) return;
+      if (initialMember.id === 'primary') {
+          alert("O perfil principal não pode ser excluído.");
+          return;
+      }
+      if (confirm("Tem certeza que deseja excluir este perfil da família? Esta ação não pode ser desfeita.")) {
+          onDelete(initialMember.id);
+      }
+  };
+
   const toggleSelector = (mode: 'emoji' | 'upload') => {
     if (avatarMode === mode && isSelectorOpen) {
       setIsSelectorOpen(false);
@@ -130,7 +142,19 @@ export const ProfileEditorScreen: React.FC<ProfileEditorScreenProps> = ({ onSave
             <ArrowLeft className="w-6 h-6 text-gray-600" />
           </button>
           <h1 className="text-xl font-bold text-gray-900">{initialMember ? 'Editar Pessoa' : 'Nova Pessoa'}</h1>
-          <div className="w-10"></div>
+          
+          {/* Delete Button - Only for existing members that are not primary */}
+          {initialMember && initialMember.id !== 'primary' && onDelete ? (
+              <button 
+                onClick={handleDelete}
+                className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition-colors"
+                title="Excluir Perfil"
+              >
+                  <Trash2 className="w-5 h-5" />
+              </button>
+          ) : (
+              <div className="w-9"></div>
+          )}
         </div>
 
         <div className="space-y-6">
