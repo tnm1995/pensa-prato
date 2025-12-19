@@ -115,13 +115,14 @@ function App() {
     return () => clearTimeout(timer);
   }, [isAuthChecking, user, isDemoMode]);
 
-  // ESCUTA EM TEMPO REAL: Configurações Globais com tratamento de erro de permissão
+  // ESCUTA EM TEMPO REAL: Configurações Globais (Checkout e Landing)
   useEffect(() => {
     if (db) {
         // Escutar Checkout
         const unsubCheckout = onSnapshot(doc(db, 'admin_settings', 'checkout'), (snap: any) => {
-            if (snap.exists) {
-                const data = snap.data();
+            const hasDoc = snap && (typeof snap.exists === 'function' ? snap.exists() : snap.exists);
+            if (hasDoc) {
+                const data = typeof snap.data === 'function' ? snap.data() : snap.data;
                 setCheckoutConfig({
                     proMonthlyUrl: data.proMonthlyUrl || data.proUrl || DEFAULT_CHECKOUT_PRO,
                     proAnnualUrl: data.proAnnualUrl || '',
@@ -129,20 +130,19 @@ function App() {
                 });
             }
         }, (err: any) => {
-            // Silencia erro de permissão se o usuário não for admin
             if (err.code !== 'permission-denied') console.warn("Erro ao carregar checkout:", err);
         });
 
         // Escutar Landing Page
         const unsubLanding = onSnapshot(doc(db, 'admin_settings', 'landing_page'), (snap: any) => {
-            if (snap.exists) {
-                const data = snap.data();
-                if (data.socialProofs) {
+            const hasDoc = snap && (typeof snap.exists === 'function' ? snap.exists() : snap.exists);
+            if (hasDoc) {
+                const data = typeof snap.data === 'function' ? snap.data() : snap.data;
+                if (data && data.socialProofs) {
                     setCustomSocialProofs(data.socialProofs);
                 }
             }
         }, (err: any) => {
-            // Silencia erro de permissão se o usuário não for admin
             if (err.code !== 'permission-denied') console.warn("Erro ao carregar landing page:", err);
         });
 
@@ -151,7 +151,7 @@ function App() {
             unsubLanding();
         };
     }
-  }, []);
+  }, [user]); // Re-executa quando o usuário muda para lidar com permissões do Admin
 
   // FIREBASE AUTH + SYNC USUÁRIO
   useEffect(() => {
@@ -169,7 +169,7 @@ function App() {
              const unsubUser = onSnapshot(userDocRef, (docSnap: any) => {
                 if (isLoggingOut.current) return;
                 let adminStatus = false;
-                let hasDoc = docSnap && docSnap.exists;
+                const hasDoc = docSnap && (typeof docSnap.exists === 'function' ? docSnap.exists() : docSnap.exists);
                 let hasCpf = false;
                 let proStatus = false;
                 

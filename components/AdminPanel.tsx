@@ -217,8 +217,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
       setLoadingConfig(true);
       try {
           const docSnap = await getDoc(doc(db, 'admin_settings', 'checkout'));
-          if (docSnap.exists) {
-              const data = docSnap.data();
+          const exists = docSnap && (typeof docSnap.exists === 'function' ? docSnap.exists() : docSnap.exists);
+          if (exists) {
+              const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
               setCheckoutConfig({
                   proMonthlyUrl: data.proMonthlyUrl || data.proUrl || '', 
                   proAnnualUrl: data.proAnnualUrl || '',
@@ -260,8 +261,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
       setLoadingLanding(true);
       try {
           const docSnap = await getDoc(doc(db, 'admin_settings', 'landing_page'));
-          if (docSnap.exists) {
-              const data = docSnap.data();
+          const exists = docSnap && (typeof docSnap.exists === 'function' ? docSnap.exists() : docSnap.exists);
+          if (exists) {
+              const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
               setLandingProofs(data.socialProofs || []);
           } else {
               setLandingProofs([]);
@@ -276,7 +278,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
   const handleSaveLanding = async () => {
       setSavingLanding(true);
       try {
-          await setDoc(doc(db, 'admin_settings', 'landing_page'), { socialProofs: landingProofs });
+          // Garante que salvamos apenas os campos necessários na estrutura correta
+          const socialProofsToSave = landingProofs.map(p => ({
+              title: p.title || '',
+              user: p.user || '',
+              img: p.img || '',
+              avatar: p.avatar || `https://ui-avatars.com/api/?name=${(p.user || 'User').replace(' ', '+')}&background=random`
+          }));
+          
+          await setDoc(doc(db, 'admin_settings', 'landing_page'), { socialProofs: socialProofsToSave });
           if (showToast) showToast("Conteúdo da Landing Page atualizado!", "success");
       } catch (e) {
           console.error(e);
