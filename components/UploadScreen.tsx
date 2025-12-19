@@ -126,6 +126,13 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
 
   const remaining = Math.max(0, maxFreeUses - freeUsageCount);
 
+  // Helper para nome exibido
+  const getDisplayName = () => {
+    if (activeProfiles.length === 0) return "Para quem?";
+    if (activeProfiles.length === 1) return String(activeProfiles[0].name || "Usuário");
+    return "Família & Amigos";
+  };
+
   return (
     <Box sx={{ 
       display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#FDFCF8', pb: 10,
@@ -174,8 +181,8 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
                 <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 40, height: 40, border: '2px solid white' } }}>
                     {activeProfiles.length > 0 ? (
                         activeProfiles.map((p, i) => (
-                            <Avatar key={p.id || i} src={p.avatar} alt={p.name}>
-                                {!p.avatar && p.name ? p.name.charAt(0) : '?'}
+                            <Avatar key={p.id || String(i)} src={p.avatar} alt={String(p.name || "U")}>
+                                {!p.avatar && p.name ? String(p.name).charAt(0) : '?'}
                             </Avatar>
                         ))
                     ) : (
@@ -185,8 +192,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
                 
                 <Box sx={{ textAlign: 'left' }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1f2937', lineHeight: 1.2 }}>
-                        {activeProfiles.length === 0 ? "Para quem?" : 
-                         activeProfiles.length === 1 ? activeProfiles[0].name : "Família & Amigos"}
+                        {getDisplayName()}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, borderRadius: 1, bgcolor: '#f8fafc', border: '1px solid #f1f5f9' }}>
@@ -288,7 +294,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
 
         {error && (
             <Fade in={Boolean(error)}>
-                <Alert severity="error" icon={<AlertCircle size={20} />} sx={{ mt: 3, borderRadius: 4, fontWeight: 600 }}>{error}</Alert>
+                <Alert severity="error" icon={<AlertCircle size={20} />} sx={{ mt: 3, borderRadius: 4, fontWeight: 600 }}>{String(error)}</Alert>
             </Fade>
         )}
 
