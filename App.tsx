@@ -115,8 +115,10 @@ function App() {
     return () => clearTimeout(timer);
   }, [isAuthChecking, user, isDemoMode]);
 
+  // ESCUTA EM TEMPO REAL: Configurações Globais (Checkout e Landing)
   useEffect(() => {
     if (db) {
+        // Escutar Checkout
         const unsubCheckout = onSnapshot(doc(db, 'admin_settings', 'checkout'), (snap: any) => {
             const hasDoc = snap && (typeof snap.exists === 'function' ? snap.exists() : snap.exists);
             if (hasDoc) {
@@ -131,6 +133,7 @@ function App() {
             if (err.code !== 'permission-denied') console.warn("Erro ao carregar checkout:", err);
         });
 
+        // Escutar Landing Page
         const unsubLanding = onSnapshot(doc(db, 'admin_settings', 'landing_page'), (snap: any) => {
             const hasDoc = snap && (typeof snap.exists === 'function' ? snap.exists() : snap.exists);
             if (hasDoc) {
@@ -148,8 +151,9 @@ function App() {
             unsubLanding();
         };
     }
-  }, [user]);
+  }, [user]); // Re-executa quando o usuário muda para lidar com permissões do Admin
 
+  // FIREBASE AUTH + SYNC USUÁRIO
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
       clearListeners();
@@ -282,12 +286,7 @@ function App() {
   const handleFileSelect = async (file: File) => {
     if (!user && !isDemoMode) return;
     if (!isPro && usageCount >= MAX_FREE_USES) { setPaywallContext({ type: 'general' }); setShowPaywall(true); return; }
-    
-    // Converte para base64 para persistência (LoadingScreen)
-    const reader = new FileReader();
-    reader.onload = (e) => setImagePreview(e.target?.result as string);
-    reader.readAsDataURL(file);
-
+    setImagePreview(URL.createObjectURL(file));
     setLoadingMode('analyzing');
     setCurrentView(AppView.ANALYZING);
     try {
