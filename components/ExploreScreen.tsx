@@ -30,14 +30,14 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   
   const seasonalCategories: Category[] = [
     { id: 'Festa Junina', label: 'Festa Junina 🌽', icon: <Flame className="w-5 h-5" />, color: 'text-orange-600', bg: 'bg-orange-100' },
-    { id: 'Páscoa', label: 'Páscoa 🐰', icon: <span className="text-xl">🍫</span>, color: 'text-purple-600', bg: 'bg-purple-100' },
+    { id: 'Páscoa', label: 'Páscoa 🐰', icon: <span className="text-xl">🍫</span>, color: 'text-emerald-600', bg: 'bg-emerald-100' },
     { id: 'Natal', label: 'Natal 🎄', icon: <span className="text-xl">🎅</span>, color: 'text-red-600', bg: 'bg-red-100' },
     { id: 'Ano Novo', label: 'Ano Novo 🥂', icon: <span className="text-xl">✨</span>, color: 'text-yellow-600', bg: 'bg-yellow-100' },
   ];
 
   const mealCategories: Category[] = [
     { id: 'Café da Manhã', label: 'Café da Manhã', icon: <Coffee className="w-5 h-5" />, color: 'text-amber-700', bg: 'bg-amber-100' },
-    { id: 'Almoço de Domingo', label: 'Almoço de Domingo', icon: <Utensils className="w-5 h-5" />, color: 'text-blue-600', bg: 'bg-blue-100' },
+    { id: 'Almoço de Domingo', label: 'Almoço de Domingo', icon: <Utensils className="w-5 h-5" />, color: 'text-amber-600', bg: 'bg-amber-100' },
     { id: 'Jantar Romântico', label: 'Jantar Romântico', icon: <Wine className="w-5 h-5" />, color: 'text-rose-600', bg: 'bg-rose-100' },
     { id: 'Lanche Rápido', label: 'Lanche Rápido', icon: <span className="text-xl">🥪</span>, color: 'text-green-600', bg: 'bg-green-100' },
   ];

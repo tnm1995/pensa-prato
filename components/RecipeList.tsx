@@ -57,7 +57,7 @@ export const RecipeList: React.FC<RecipeListProps> = ({
       </div>
 
       {/* Lista de Receitas */}
-      <div className="flex-1 p-4 space-y-3 pb-24">
+      <div className="flex-1 p-4 space-y-4 pb-32">
         {recipes.map((recipe, idx) => {
           const fav = isFavorite(recipe);
           const methodInfo = getMethodInfo(recipe);

@@ -1,10 +1,6 @@
 
-
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
-import { AppView, FamilyMember, CookingMethod, ShoppingItem, Recipe, ScanResult } from './types';
+import { AppView, FamilyMember, CookingMethod, ShoppingItem, Recipe, ScanResult, SocialProof } from './types';
 import { analyzeFridgeImage, generateRecipes, getMockScanResult, getMockRecipes, generateRecipesByCategory } from './services/geminiService';
 import { UploadScreen } from './components/UploadScreen';
 import { LoadingScreen } from './components/LoadingScreen';
@@ -34,7 +30,6 @@ import { PrivacyScreen } from './components/PrivacyScreen';
 
 const MAX_FREE_USES = 3;
 
-// Default fallbacks in case DB fetch fails (Optional)
 const DEFAULT_CHECKOUT_PRO = "https://pay.hotmart.com/SEU_LINK_PRO_AQUI"; 
 const DEFAULT_CHECKOUT_PACK = "https://pay.hotmart.com/SEU_LINK_PACK_GENERICO"; 
 
@@ -46,7 +41,7 @@ function App() {
   const [cookedHistory, setCookedHistory] = useState<Recipe[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [pantryItems, setPantryItems] = useState<string[]>([]);
-  const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING); // Changed default to LANDING
+  const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING);
   const [lastMainView, setLastMainView] = useState<AppView>(AppView.WELCOME);
   const [activeProfiles, setActiveProfiles] = useState<FamilyMember[]>([]);
   const [cookingMethod, setCookingMethod] = useState<CookingMethod>(CookingMethod.ANY);
@@ -59,32 +54,23 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Navigation History for Legal Pages
-  const [previousView, setPreviousView] = useState<AppView>(AppView.LANDING);
-
-  // Paywall & Usage State
   const [usageCount, setUsageCount] = useState(() => parseInt(localStorage.getItem('pp_usage_count') || '0'));
-  
-  // Subscription State controlled by Firestore now
   const [isPro, setIsPro] = useState(false);
-  
   const [unlockedPacks, setUnlockedPacks] = useState<string[]>(() => {
       try { return JSON.parse(localStorage.getItem('pp_unlocked_packs') || '[]'); } catch { return []; }
   });
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallContext, setPaywallContext] = useState<{ type: 'general' | 'category', id?: string }>({ type: 'general' });
 
-  // Dynamic Checkout Config (Updated to support Monthly and Annual)
   const [checkoutConfig, setCheckoutConfig] = useState<{ proMonthlyUrl: string, proAnnualUrl: string, packs: Record<string, string> }>({
       proMonthlyUrl: DEFAULT_CHECKOUT_PRO,
       proAnnualUrl: '',
       packs: {}
   });
 
-  // Admin State - Controlled strictly by DB
+  const [customSocialProofs, setCustomSocialProofs] = useState<SocialProof[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Initialize Demo Mode from local storage to persist across refreshes
   const [isDemoMode, setIsDemoMode] = useState(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -96,7 +82,6 @@ function App() {
     return false;
   });
 
-  // Toast State
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -104,523 +89,213 @@ function App() {
       setTimeout(() => setToast(null), 3000);
   };
   
-  // Use a ref for isDemoMode to use inside useEffect without triggering re-subscriptions
   const isDemoModeRef = useRef(isDemoMode);
   useEffect(() => { isDemoModeRef.current = isDemoMode; }, [isDemoMode]);
 
-  // Persist usage data
   useEffect(() => { localStorage.setItem('pp_usage_count', usageCount.toString()); }, [usageCount]);
-  // Removed local storage persistence for isPro as it now comes from Firestore
   useEffect(() => { localStorage.setItem('pp_unlocked_packs', JSON.stringify(unlockedPacks)); }, [unlockedPacks]);
 
-  // Flag to prevent snapshot listeners from redirecting during logout process
   const isLoggingOut = useRef(false);
-
-  // Store unsubscribe functions for cleanup
   const unsubs = useRef<(() => void)[]>([]);
-
   const [loadingMode, setLoadingMode] = useState<'analyzing' | 'recipes'>('analyzing');
-  
-  // Track if it's the initial auth check (F5/Load) to enforce Welcome screen only then
   const isInitialAuthCheck = useRef(true);
-
-  const viewRef = useRef(currentView);
-  useEffect(() => { viewRef.current = currentView; }, [currentView]);
-
-  // Safe map helper for snapshots
-  const safeMapDocs = (snap: any, mapper: (doc: any) => any) => {
-    if (snap && snap.docs && Array.isArray(snap.docs)) {
-      return snap.docs.map(mapper);
-    }
-    return [];
-  };
 
   const clearListeners = () => {
       unsubs.current.forEach(u => u());
       unsubs.current = [];
   };
 
-  // FAILSAFE TIMEOUT: Ensure Splash Screen disappears even if Firebase hangs
   useEffect(() => {
     const timer = setTimeout(() => {
         if (isAuthChecking) {
-            console.warn("Auth check timed out. Forcing UI load.");
             setIsAuthChecking(false);
-            if (!user && !isDemoMode) {
-                // If timed out and no user, show Landing Page
-                setCurrentView(AppView.LANDING);
-            }
+            if (!user && !isDemoMode) setCurrentView(AppView.LANDING);
         }
-    }, 2500); // 2.5 seconds timeout
+    }, 2500);
     return () => clearTimeout(timer);
   }, [isAuthChecking, user, isDemoMode]);
 
-  // Fetch Admin Checkout Settings on load
+  // ESCUTA EM TEMPO REAL: Configurações Globais com tratamento de erro de permissão
   useEffect(() => {
     if (db) {
-        getDoc(doc(db, 'admin_settings', 'checkout'))
-            .then((snap: any) => {
-                if (snap.exists) {
-                    const data = snap.data();
-                    setCheckoutConfig({
-                        proMonthlyUrl: data.proMonthlyUrl || data.proUrl || DEFAULT_CHECKOUT_PRO,
-                        proAnnualUrl: data.proAnnualUrl || '',
-                        packs: data.packs || {}
-                    });
+        // Escutar Checkout
+        const unsubCheckout = onSnapshot(doc(db, 'admin_settings', 'checkout'), (snap: any) => {
+            if (snap.exists) {
+                const data = snap.data();
+                setCheckoutConfig({
+                    proMonthlyUrl: data.proMonthlyUrl || data.proUrl || DEFAULT_CHECKOUT_PRO,
+                    proAnnualUrl: data.proAnnualUrl || '',
+                    packs: data.packs || {}
+                });
+            }
+        }, (err: any) => {
+            // Silencia erro de permissão se o usuário não for admin
+            if (err.code !== 'permission-denied') console.warn("Erro ao carregar checkout:", err);
+        });
+
+        // Escutar Landing Page
+        const unsubLanding = onSnapshot(doc(db, 'admin_settings', 'landing_page'), (snap: any) => {
+            if (snap.exists) {
+                const data = snap.data();
+                if (data.socialProofs) {
+                    setCustomSocialProofs(data.socialProofs);
                 }
-            })
-            .catch(err => console.warn("Could not fetch checkout settings (requires internet/permission)", err));
+            }
+        }, (err: any) => {
+            // Silencia erro de permissão se o usuário não for admin
+            if (err.code !== 'permission-denied') console.warn("Erro ao carregar landing page:", err);
+        });
+
+        return () => {
+            unsubCheckout();
+            unsubLanding();
+        };
     }
   }, []);
 
-  // FIREBASE AUTH + SYNC
+  // FIREBASE AUTH + SYNC USUÁRIO
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
-      // Clear previous listeners on any auth change
       clearListeners();
 
       try {
         if (currentUser) {
-          // User is logged in
           setUser(currentUser);
           setIsDemoMode(false);
           localStorage.removeItem('pp_demo_mode');
           
           if (db) {
-             try {
-                 // 1. Check if user needs to complete profile (CPF Check) AND Subscription Status
-                 const userDocRef = doc(db, 'users', currentUser.uid);
-                 
-                 // Use snapshot listener for admin status AND cpf check to be reactive
-                 const unsubUser = onSnapshot(userDocRef, (docSnap: any) => {
-                    if (isLoggingOut.current) return; // Prevent redirect if logging out
+             const userDocRef = doc(db, 'users', currentUser.uid);
+             const unsubUser = onSnapshot(userDocRef, (docSnap: any) => {
+                if (isLoggingOut.current) return;
+                let adminStatus = false;
+                let hasDoc = docSnap && docSnap.exists;
+                let hasCpf = false;
+                let proStatus = false;
+                
+                if (hasDoc) {
+                    const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
+                    if (data?.isAdmin === true) adminStatus = true;
+                    if (data?.cpf) hasCpf = true;
+                    if (data?.isPro) proStatus = true;
+                }
+                setIsAdmin(adminStatus);
+                setIsPro(proStatus);
 
-                    let adminStatus = false;
-                    let hasDoc = docSnap && docSnap.exists;
-                    let hasCpf = false;
-                    let proStatus = false;
-                    
-                    if (hasDoc) {
-                        const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
-                        if (data?.isAdmin === true) adminStatus = true;
-                        if (data?.cpf) hasCpf = true;
+                setCurrentView((prev) => {
+                    if (prev === AppView.TERMS || prev === AppView.PRIVACY) return prev;
+                    const isAuthFlow = [AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE].includes(prev);
+                    if (!hasDoc || !hasCpf) return AppView.COMPLETE_PROFILE;
+                    if (isAuthFlow) return AppView.WELCOME;
+                    return prev;
+                });
+             }, (err: any) => {
+                if (err.code !== 'permission-denied') console.warn("Erro no listener de usuário:", err);
+             });
+             unsubs.current.push(unsubUser);
 
-                        // Check Pro Status & Expiry
-                        if (data?.isPro) {
-                            proStatus = true;
-                            // Check expiry if exists
-                            if (data.subscriptionExpiry) {
-                                const now = new Date().getTime();
-                                const expiry = data.subscriptionExpiry.toMillis ? data.subscriptionExpiry.toMillis() : new Date(data.subscriptionExpiry).getTime();
-                                if (expiry < now) {
-                                    proStatus = false; // Expired
-                                    console.log("Subscription expired");
-                                }
-                            }
-                        }
-                    }
-                    setIsAdmin(adminStatus);
-                    setIsPro(proStatus);
-
-                    // NAVIGATE based on status
-                    setCurrentView((prev) => {
-                        // Keep on Legal pages if viewing them
-                        if (prev === AppView.TERMS || prev === AppView.PRIVACY) return prev;
-
-                        // If user is currently in an auth flow screen or LANDING or complete profile
-                        const isAuthFlow = [AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE].includes(prev);
-                        
-                        // If they don't have a doc or don't have CPF, force COMPLETE_PROFILE
-                        if (!hasDoc || !hasCpf) {
-                             return AppView.COMPLETE_PROFILE;
-                        }
-
-                        // If they have everything and are in auth flow/landing, go to Welcome
-                        if (isAuthFlow) {
-                             return AppView.WELCOME;
-                        }
-
-                        // Otherwise keep current view (e.g. if they refreshed in Profile)
-                        return prev;
-                    });
-
-                 }, (err: any) => {
-                     // IMPORTANT: Check isLoggingOut here too.
-                     // Permission denied happens on logout, we must NOT redirect to Welcome in that case.
-                     if (isLoggingOut.current) return;
-
-                     console.warn("User/Admin check error:", err);
-                     // Only fallback if NOT logging out
-                     setCurrentView((prev) => {
-                         if ([AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD].includes(prev)) return AppView.WELCOME;
-                         return prev;
-                     });
-                 });
-                 unsubs.current.push(unsubUser);
-
-                 // FAMILY
-                 const familyRef = collection(db, 'users', currentUser.uid, 'family');
-                 const unsubFamily = onSnapshot(familyRef, (snap: any) => {
-                   if (isLoggingOut.current) return;
-                   const data = safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember));
-                   setFamilyMembers(data);
-                 }, (err: any) => console.warn("Family sync error (ignoring):", err));
-                 unsubs.current.push(unsubFamily);
-
-                 // FAVORITES
-                 const favRef = collection(db, 'users', currentUser.uid, 'favorites');
-                 const unsubFav = onSnapshot(favRef, (s: any) => {
-                    if (isLoggingOut.current) return;
-                    setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe)))
-                 }, (err: any) => console.warn("Fav sync error (ignoring):", err));
-                 unsubs.current.push(unsubFav);
-
-                 // HISTORY
-                 const historyRef = collection(db, 'users', currentUser.uid, 'history');
-                 const unsubHist = onSnapshot(historyRef, (s: any) => {
-                     if (isLoggingOut.current) return;
-                     setCookedHistory(safeMapDocs(s, d => d.data() as Recipe))
-                 }, (err: any) => console.warn("History sync error (ignoring):", err));
-                 unsubs.current.push(unsubHist);
-
-                 // SHOPPING
-                 const shoppingRef = collection(db, 'users', currentUser.uid, 'shopping');
-                 const unsubShop = onSnapshot(shoppingRef, (s: any) => {
-                     if (isLoggingOut.current) return;
-                     setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem)))
-                 }, (err: any) => console.warn("Shopping sync error (ignoring):", err));
-                 unsubs.current.push(unsubShop);
-
-                 // PANTRY
-                 const pantryRef = doc(db, 'users', currentUser.uid, 'settings', 'pantry');
-                 const unsubPantry = onSnapshot(pantryRef, (s: any) => {
-                     if (isLoggingOut.current || !s) return;
-                     const exists = typeof s.exists === 'function' ? s.exists() : s.exists;
-                     const data = typeof s.data === 'function' ? s.data() : s.data;
-                     setPantryItems(exists && data ? data.items || [] : []);
-                 }, (err: any) => console.warn("Pantry sync error (ignoring):", err));
-                 unsubs.current.push(unsubPantry);
-
-             } catch (syncError) {
-                 console.warn("Sync setup error:", syncError);
-             }
+             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'family'), (snap: any) => setFamilyMembers(safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember))), (err) => {}));
+             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'favorites'), (s: any) => setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe))), (err) => {}));
+             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'history'), (s: any) => setCookedHistory(safeMapDocs(s, d => d.data() as Recipe)), (err) => {}));
+             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'shopping'), (s: any) => setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem))), (err) => {}));
+             unsubs.current.push(onSnapshot(doc(db, 'users', currentUser.uid, 'settings', 'pantry'), (s: any) => {
+                 const data = typeof s.data === 'function' ? s.data() : s.data;
+                 setPantryItems(data ? data.items || [] : []);
+             }, (err) => {}));
           }
-
         } else {
-          // User is logged out
           setUser(null);
-          
-          // Access the ref value to avoid dependency loop
           if (isDemoModeRef.current) {
-               if (isInitialAuthCheck.current) {
-                   setCurrentView(AppView.WELCOME);
-               }
+               if (isInitialAuthCheck.current) setCurrentView(AppView.WELCOME);
           } else {
-               // Default to LANDING page instead of LOGIN, unless already on legal pages
-               setCurrentView(prev => {
-                   if (prev === AppView.TERMS || prev === AppView.PRIVACY) return prev;
-                   return AppView.LANDING;
-               });
+               setCurrentView(prev => (prev === AppView.TERMS || prev === AppView.PRIVACY) ? prev : AppView.LANDING);
           }
         }
       } catch (err) {
         console.error("Auth initialization error:", err);
         setCurrentView(AppView.LANDING);
       } finally {
-        if (isInitialAuthCheck.current) {
-            isInitialAuthCheck.current = false;
-        }
+        if (isInitialAuthCheck.current) isInitialAuthCheck.current = false;
         setIsAuthChecking(false);
       }
     });
 
-    return () => {
-        unsubscribe();
-        clearListeners();
-    };
-  }, []); // Empty dependency array
+    return () => { unsubscribe(); clearListeners(); };
+  }, []);
 
-  // ACTIVE PROFILES PERSISTENCE
-  useEffect(() => {
-    if (user && familyMembers.length > 0) {
-      try {
-        const saved = localStorage.getItem(`active_profiles_${user.uid}`);
-        if (saved && activeProfiles.length === 0) {
-          const ids = JSON.parse(saved);
-          if (Array.isArray(ids)) {
-             setActiveProfiles(familyMembers.filter(m => ids.includes(m.id)));
-          }
-        }
-      } catch (e) {
-        console.warn("Failed to parse active profiles from local storage", e);
-        localStorage.removeItem(`active_profiles_${user.uid}`);
-      }
-    }
-  }, [user, familyMembers]);
-
-  // SYNC ACTIVE PROFILES WHEN FAMILY MEMBERS UPDATE
-  useEffect(() => {
-    if (activeProfiles.length > 0 && familyMembers.length > 0) {
-        setActiveProfiles(prev => {
-            const updated = prev.map(p => familyMembers.find(m => m.id === p.id)).filter(Boolean) as FamilyMember[];
-            if (prev.length !== updated.length) return updated;
-            return prev;
-        });
-    }
-  }, [familyMembers]);
-
-  useEffect(() => {
-    if (user && activeProfiles.length > 0) {
-      try {
-          localStorage.setItem(`active_profiles_${user.uid}`, JSON.stringify(activeProfiles.map(m => m.id)));
-      } catch (e) {
-          console.warn("LocalStorage set error", e);
-      }
-    }
-  }, [activeProfiles, user]);
+  const safeMapDocs = (snap: any, mapper: (doc: any) => any) => {
+    if (snap && snap.docs && Array.isArray(snap.docs)) return snap.docs.map(mapper);
+    return [];
+  };
 
   const handleLogout = async () => {
       isLoggingOut.current = true;
       clearListeners();
-      
       try {
           localStorage.removeItem('pp_demo_mode');
-          if (user?.uid) {
-              localStorage.removeItem(`active_profiles_${user.uid}`);
-          }
           setIsDemoMode(false);
           setUser(null); 
           setActiveProfiles([]);
           setIsAdmin(false);
-          setScanResult(null);
-          setRecipes([]);
-          setFamilyMembers([]);
-          setCurrentView(AppView.LANDING); // Redirect to Landing Page
-          await signOut(auth);
-      } catch (error) {
-          console.error("Logout failed", error);
           setCurrentView(AppView.LANDING);
-          setUser(null);
-      } finally {
-          setTimeout(() => { isLoggingOut.current = false; }, 1000);
-      }
+          await signOut(auth);
+      } catch (error) { console.error("Logout failed", error); setCurrentView(AppView.LANDING); } finally { setTimeout(() => { isLoggingOut.current = false; }, 1000); }
   };
   
   const handleUpdatePantry = async (items: string[]) => {
     if (!user || !db) return;
-    try {
-        await setDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items });
-        showToast("Despensa atualizada!", "success");
-    } catch(e) { console.error(e); }
+    try { await setDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items }); showToast("Despensa atualizada!", "success"); } catch(e) { console.error(e); }
   };
   
   const handleSaveMember = async (memberToSave: FamilyMember) => {
     if (isDemoMode) {
-      setFamilyMembers(prev => {
-        const exists = prev.some(m => m.id === memberToSave.id);
-        if (exists) return prev.map(m => m.id === memberToSave.id ? memberToSave : m);
-        return [...prev, { ...memberToSave, id: Date.now().toString() }];
-      });
-      showToast("Perfil salvo (Demo)", "success");
+      setFamilyMembers(prev => prev.some(m => m.id === memberToSave.id) ? prev.map(m => m.id === memberToSave.id ? memberToSave : m) : [...prev, { ...memberToSave, id: Date.now().toString() }]);
       if (currentView === AppView.PROFILE_EDITOR) setCurrentView(editingReturnView);
       return;
     }
-
     if (!user || !db) return;
     try {
         const isNew = !memberToSave.id || memberToSave.id.startsWith('temp-');
-        
-        if (memberToSave.id === 'primary') {
-             await setDoc(doc(db, 'users', user.uid, 'family', 'primary'), memberToSave, { merge: true });
-        } else if (!isNew && memberToSave.id !== 'default-user') {
-             await setDoc(doc(db, 'users', user.uid, 'family', memberToSave.id), memberToSave, { merge: true });
-        } else {
-             const { id, ...data } = memberToSave; 
-             await addDoc(collection(db, 'users', user.uid, 'family'), data);
-        }
-        showToast("Perfil salvo com sucesso!", "success");
-    } catch (e) { 
-        console.error("Error saving member", e);
-        showToast("Erro ao salvar perfil.", "error");
-    }
+        if (memberToSave.id === 'primary') await setDoc(doc(db, 'users', user.uid, 'family', 'primary'), memberToSave, { merge: true });
+        else if (!isNew && memberToSave.id !== 'default-user') await setDoc(doc(db, 'users', user.uid, 'family', memberToSave.id), memberToSave, { merge: true });
+        else { const { id, ...data } = memberToSave; await addDoc(collection(db, 'users', user.uid, 'family'), data); }
+        showToast("Perfil salvo!", "success");
+    } catch (e) { console.error(e); }
     if (currentView === AppView.PROFILE_EDITOR) setCurrentView(editingReturnView);
-  };
-
-  const handleDeleteMember = async (memberId: string) => {
-    if (isDemoMode) {
-      setFamilyMembers(prev => prev.filter(m => m.id !== memberId));
-      setActiveProfiles(prev => prev.filter(m => m.id !== memberId));
-      setCurrentView(editingReturnView);
-      showToast("Perfil removido (Demo)", "info");
-      return;
-    }
-
-    if (!user || !db) return;
-
-    try {
-        await deleteDoc(doc(db, 'users', user.uid, 'family', memberId));
-        setActiveProfiles(prev => prev.filter(m => m.id !== memberId));
-        setCurrentView(editingReturnView);
-        showToast("Perfil removido.", "info");
-    } catch (e) {
-        console.error("Error deleting member", e);
-        showToast("Erro ao excluir perfil.", "error");
-    }
   };
 
   const handleToggleFavorite = async (recipe: Recipe) => {
     if (isDemoMode) {
-        setFavoriteRecipes(prev => {
-            const exists = prev.some(r => r.title === recipe.title);
-            if (exists) {
-                showToast("Removido dos favoritos", "info");
-                return prev.filter(r => r.title !== recipe.title);
-            }
-            showToast("Salvo nos favoritos!", "success");
-            return [...prev, recipe];
-        });
+        setFavoriteRecipes(prev => prev.some(r => r.title === recipe.title) ? (showToast("Removido", "info"), prev.filter(r => r.title !== recipe.title)) : (showToast("Salvo!", "success"), [...prev, recipe]));
         return;
     }
     if (!user || !db) return;
     try {
         const existing = favoriteRecipes.find(r => r.title === recipe.title);
-        if (existing) {
-            const docId = (existing as any)._firestoreId;
-            if (docId) await deleteDoc(doc(db, 'users', user.uid, 'favorites', docId));
-            showToast("Removido dos favoritos", "info");
-        } else {
-            const dataToSave = { ...recipe, image: recipe.image || `https://picsum.photos/seed/${recipe.title.replace(/\s/g,'')}/600/400` };
-            delete (dataToSave as any)._firestoreId; 
-            await addDoc(collection(db, 'users', user.uid, 'favorites'), dataToSave);
-            showToast("Salvo nos favoritos!", "success");
-        }
+        if (existing) { const docId = (existing as any)._firestoreId; if (docId) await deleteDoc(doc(db, 'users', user.uid, 'favorites', docId)); showToast("Removido", "info"); }
+        else { const dataToSave = { ...recipe, image: recipe.image || `https://picsum.photos/seed/${recipe.title.replace(/\s/g,'')}/600/400` }; delete (dataToSave as any)._firestoreId; await addDoc(collection(db, 'users', user.uid, 'favorites'), dataToSave); showToast("Salvo!", "success"); }
     } catch (e) { console.error(e); }
   };
 
   const handleFinishCooking = async (recipe: Recipe) => {
-    showToast("Receita concluída! Bom apetite!", "success");
-    if (isDemoMode) {
-        setCookedHistory(prev => [...prev, recipe]);
-        return;
-    }
-    if (user && db) {
-        try {
-          const dataToSave = { 
-              ...recipe, 
-              cookedAt: Date.now(),
-              image: recipe.image || `https://picsum.photos/seed/${recipe.title.replace(/\s/g,'')}/600/400` 
-          };
-          delete (dataToSave as any)._firestoreId;
-          await addDoc(collection(db, 'users', user.uid, 'history'), dataToSave);
-        } catch(e) { console.error(e); }
-    }
-  };
-
-  const handleRateRecipe = async (recipe: Recipe, rating: number) => {
-    if (isDemoMode) return;
-    if (!user || !db) return;
-    try {
-        const existing = favoriteRecipes.find(r => r.title === recipe.title);
-        if (existing) {
-             const docId = (existing as any)._firestoreId;
-             if (docId) await updateDoc(doc(db, 'users', user.uid, 'favorites', docId), { rating });
-        } else {
-            if (selectedRecipe && selectedRecipe.title === recipe.title) {
-                setSelectedRecipe(prev => prev ? ({ ...prev, rating }) : null);
-            }
-        }
-    } catch (e) { console.error(e); }
-  };
-
-  const handleAddToShoppingList = async (name: string, quantity: string = '') => {
-    if (isDemoMode) {
-        setShoppingList(prev => [...prev, { id: Date.now().toString(), name, quantity, checked: false }]);
-        showToast("Item adicionado à lista", "success");
-        return;
-    }
-    if (!user || !db) return;
-    try {
-        await addDoc(collection(db, 'users', user.uid, 'shopping'), {
-            name, quantity, checked: false, createdAt: Date.now()
-        });
-        showToast("Item adicionado à lista", "success");
-    } catch (e) { console.error(e); }
-  };
-
-  const handleToggleShoppingItem = async (id: string) => {
-    if (isDemoMode) {
-        setShoppingList(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
-        return;
-    }
-    if (!user || !db) return;
-    try {
-        const item = shoppingList.find(i => i.id === id);
-        if (item) await updateDoc(doc(db, 'users', user.uid, 'shopping', id), { checked: !item.checked });
-    } catch (e) { console.error(e); }
-  };
-
-  const handleEditShoppingItem = async (id: string, name: string, quantity: string) => {
-    if (isDemoMode) {
-        setShoppingList(prev => prev.map(i => i.id === id ? { ...i, name, quantity } : i));
-        return;
-    }
-    if (!user || !db) return;
-    try {
-        await updateDoc(doc(db, 'users', user.uid, 'shopping', id), { name, quantity });
-    } catch (e) { console.error(e); }
-  };
-
-  const handleRemoveShoppingItem = async (id: string) => {
-    if (isDemoMode) {
-        setShoppingList(prev => prev.filter(i => i.id !== id));
-        return;
-    }
-    if (!user || !db) return;
-    try {
-        await deleteDoc(doc(db, 'users', user.uid, 'shopping', id));
-    } catch (e) { console.error(e); }
-  };
-
-  const handleClearShoppingList = async () => {
-    if (isDemoMode) {
-        setShoppingList([]);
-        return;
-    }
-    if (!user || !db) return;
-    try {
-        const promises = shoppingList.map(item => deleteDoc(doc(db, 'users', user.uid, 'shopping', item.id)));
-        await Promise.all(promises);
-    } catch (e) { console.error(e); }
+    showToast("Receita concluída!", "success");
+    if (isDemoMode) { setCookedHistory(prev => [...prev, recipe]); return; }
+    if (user && db) { try { await addDoc(collection(db, 'users', user.uid, 'history'), { ...recipe, cookedAt: Date.now(), image: recipe.image || `https://picsum.photos/seed/${recipe.title.replace(/\s/g,'')}/600/400` }); } catch(e) { console.error(e); } }
   };
 
   const handleFileSelect = async (file: File) => {
     if (!user && !isDemoMode) return;
-
-    // PAYWALL CHECK
-    if (!isPro && usageCount >= MAX_FREE_USES) {
-        setPaywallContext({ type: 'general' });
-        setShowPaywall(true);
-        return;
-    }
-
+    if (!isPro && usageCount >= MAX_FREE_USES) { setPaywallContext({ type: 'general' }); setShowPaywall(true); return; }
     setImagePreview(URL.createObjectURL(file));
     setLoadingMode('analyzing');
     setCurrentView(AppView.ANALYZING);
-    setScanResult(null); // Clear previous result
-    setError(null);
     try {
       const result = await analyzeFridgeImage(file);
       setScanResult(result);
       setCurrentView(AppView.RESULTS);
-      
-      // Increment Usage (Simulated)
       if (!isPro) setUsageCount(prev => prev + 1);
-
     } catch (err: any) {
-      console.error(err);
-      const message = err.message || "Não foi possível analisar a imagem. Tente novamente.";
-      setError(message);
-      showToast(message, "error");
+      setError(err.message || "Erro na análise.");
       setCurrentView(AppView.UPLOAD);
     }
   };
@@ -628,115 +303,33 @@ function App() {
   const handleFindRecipes = async (confirmedIngredients: string[]) => {
     setLoadingMode('recipes');
     setCurrentView(AppView.ANALYZING); 
-    if (isDemoMode) setImagePreview(null);
-    
     try {
-        let recipeSuggestions: Recipe[] = [];
-        if (isDemoMode) {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            recipeSuggestions = getMockRecipes();
-        } else {
-            recipeSuggestions = await generateRecipes(confirmedIngredients, activeProfiles, cookingMethod, pantryItems);
-        }
-        setRecipes(recipeSuggestions);
+        const suggestions = isDemoMode ? getMockRecipes() : await generateRecipes(confirmedIngredients, activeProfiles, cookingMethod, pantryItems);
+        setRecipes(suggestions);
         setCurrentView(AppView.RECIPES);
-    } catch(err) {
-        console.error(err);
-        setError("Erro ao gerar receitas. Tente novamente.");
-        showToast("Erro ao gerar receitas.", "error");
-        setCurrentView(AppView.RESULTS);
-    }
+    } catch(err) { console.error(err); setCurrentView(AppView.RESULTS); }
   };
 
   const handleSelectCategory = async (category: string) => {
-      // CHECK PAYWALL for Category
       const isPackUnlocked = unlockedPacks.includes(category);
-      if (!isPro && !isPackUnlocked && usageCount >= MAX_FREE_USES) {
-          setPaywallContext({ type: 'category', id: category });
-          setShowPaywall(true);
-          return;
-      }
-
+      if (!isPro && !isPackUnlocked && usageCount >= MAX_FREE_USES) { setPaywallContext({ type: 'category', id: category }); setShowPaywall(true); return; }
       setLoadingMode('recipes');
       setCurrentView(AppView.ANALYZING);
-      setScanResult(null); // Important: Clear scan result to signal "Explore Mode"
-      
       try {
-          let recipeSuggestions: Recipe[] = [];
-          if (isDemoMode) {
-             await new Promise(resolve => setTimeout(resolve, 1500));
-             recipeSuggestions = getMockRecipes();
-          } else {
-             recipeSuggestions = await generateRecipesByCategory(category, activeProfiles, cookingMethod);
-          }
-          setRecipes(recipeSuggestions);
+          const suggestions = isDemoMode ? getMockRecipes() : await generateRecipesByCategory(category, activeProfiles, cookingMethod);
+          setRecipes(suggestions);
           setCurrentView(AppView.RECIPES);
-          
-          // Increment usage if not Pro and not previously bought
-          if (!isPro && !isPackUnlocked) {
-               setUsageCount(prev => prev + 1);
-          }
-
-      } catch(err) {
-          console.error(err);
-          setError("Erro ao gerar sugestões. Tente novamente.");
-          showToast("Erro na conexão.", "error");
-          setCurrentView(AppView.EXPLORE);
-      }
+          if (!isPro && !isPackUnlocked) setUsageCount(prev => prev + 1);
+      } catch(err) { console.error(err); setCurrentView(AppView.EXPLORE); }
   };
 
-  // Paywall Actions
   const handleSubscribe = async () => {
-      // Simulation: Grant 30 days of Pro immediately
       if (!user) return;
-      try {
-          const expiry = new Date();
-          expiry.setDate(expiry.getDate() + 30);
-          
-          await updateDoc(doc(db, 'users', user.uid), {
-              isPro: true,
-              subscriptionExpiry: expiry
-          });
-          
-          setShowPaywall(false);
-          showToast("Pagamento confirmado! Bem-vindo ao PRO! 👑", "success");
-      } catch (e) {
-          console.error("Subscription update error", e);
-          showToast("Erro ao confirmar assinatura.", "error");
-      }
-  };
-
-  const handleBuyPack = () => {
-      if (paywallContext.type === 'category' && paywallContext.id) {
-          setUnlockedPacks(prev => [...prev, paywallContext.id!]);
-          setShowPaywall(false);
-          showToast(`Pacote "${paywallContext.id}" desbloqueado!`, "success");
-          // Optionally trigger the navigation immediately
-          handleSelectCategory(paywallContext.id!);
-      }
-  };
-
-  // --- Legal Navigation ---
-  const handleNavigateToLegal = (view: AppView) => {
-      setPreviousView(currentView);
-      setCurrentView(view);
+      try { const expiry = new Date(); expiry.setDate(expiry.getDate() + 30); await updateDoc(doc(db, 'users', user.uid), { isPro: true, subscriptionExpiry: expiry }); setShowPaywall(false); showToast("Bem-vindo ao PRO! 👑", "success"); } catch (e) { console.error(e); }
   };
 
   const safeUserProfile = familyMembers.find(m => m.id === 'primary') || familyMembers[0];
-
-  const showBottomMenu = ![
-    AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE,
-    AppView.ANALYZING, AppView.RECIPE_DETAIL, AppView.PROFILE_EDITOR,
-    AppView.ADMIN_PANEL, AppView.TERMS, AppView.PRIVACY
-  ].includes(currentView);
-
-  // Derive isExplore from state: If showing recipes but no scanResult, it's explore mode
-  const isExploreMode = currentView === AppView.RECIPES && scanResult === null;
-
-  // Calculate dynamic checkout URL for packs based on context
-  const activePackUrl = paywallContext.type === 'category' && paywallContext.id 
-      ? (checkoutConfig.packs[paywallContext.id] || DEFAULT_CHECKOUT_PACK)
-      : DEFAULT_CHECKOUT_PACK;
+  const showBottomMenu = ![AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE, AppView.ANALYZING, AppView.RECIPE_DETAIL, AppView.PROFILE_EDITOR, AppView.ADMIN_PANEL, AppView.TERMS, AppView.PRIVACY].includes(currentView);
 
   if (isAuthChecking) return <SplashScreen />;
 
@@ -744,48 +337,33 @@ function App() {
     <div className="min-h-screen bg-white font-sans antialiased text-gray-900 relative">
       <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
       
-      <SubscriptionModal 
-        isOpen={showPaywall} 
-        onClose={() => setShowPaywall(false)}
-        onSubscribe={handleSubscribe}
-        onBuyPack={handleBuyPack}
-        context={paywallContext}
-        checkoutUrlProMonthly={checkoutConfig.proMonthlyUrl}
-        checkoutUrlProAnnual={checkoutConfig.proAnnualUrl}
-        checkoutUrlPack={activePackUrl}
-      />
+      <SubscriptionModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} onSubscribe={handleSubscribe} onBuyPack={() => {}} context={paywallContext} checkoutUrlProMonthly={checkoutConfig.proMonthlyUrl} checkoutUrlProAnnual={checkoutConfig.proAnnualUrl} checkoutUrlPack={DEFAULT_CHECKOUT_PACK} />
 
       {currentView === AppView.LANDING && (
         <LandingPage 
             onLogin={() => setCurrentView(AppView.LOGIN)} 
             onStartTest={() => setCurrentView(AppView.REGISTER)} 
-            onTermsClick={() => handleNavigateToLegal(AppView.TERMS)}
-            onPrivacyClick={() => handleNavigateToLegal(AppView.PRIVACY)}
+            onTermsClick={() => setCurrentView(AppView.TERMS)}
+            onPrivacyClick={() => setCurrentView(AppView.PRIVACY)}
+            customSocialProofs={customSocialProofs}
         />
       )}
       
-      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {/* Navigation handled by onSnapshot */}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
-      {currentView === AppView.REGISTER && (
-        <RegisterScreen 
-            onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} 
-            onNavigateToLogin={() => setCurrentView(AppView.LOGIN)}
-            onTermsClick={() => handleNavigateToLegal(AppView.TERMS)}
-            onPrivacyClick={() => handleNavigateToLegal(AppView.PRIVACY)} 
-        />
-      )}
+      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
+      {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={() => setCurrentView(AppView.LOGIN)} />}
       {currentView === AppView.FORGOT_PASSWORD && <ForgotPasswordScreen onBack={() => setCurrentView(AppView.LOGIN)} />}
       {currentView === AppView.COMPLETE_PROFILE && user && <CompleteProfileScreen onCompleteSuccess={() => setCurrentView(AppView.WELCOME)} initialName={user.displayName} initialEmail={user.email} onBack={handleLogout} />}
 
       {currentView === AppView.WELCOME && <WelcomeScreen onSelectAny={() => { setActiveProfiles([]); setCurrentView(AppView.COOKING_METHOD); }} onSelectFamily={() => setCurrentView(AppView.FAMILY_SELECTION)} />}
       {currentView === AppView.FAMILY_SELECTION && <FamilySelectionScreen members={familyMembers} selectedMembers={activeProfiles} onToggleMember={m => setActiveProfiles(p => p.some(x => x.id === m.id) ? p.filter(x => x.id !== m.id) : [...p, m])} onSelectAll={() => setActiveProfiles(activeProfiles.length === familyMembers.length ? [] : [...familyMembers])} onContinue={() => setCurrentView(AppView.COOKING_METHOD)} onEditMember={m => { setMemberToEdit(m); setEditingReturnView(AppView.FAMILY_SELECTION); setCurrentView(AppView.PROFILE_EDITOR); }} onAddNew={() => { setMemberToEdit(undefined); setCurrentView(AppView.PROFILE_EDITOR); }} onBack={() => setCurrentView(AppView.WELCOME)} />}
       {currentView === AppView.COOKING_METHOD && <CookingMethodScreen onSelectMethod={m => { setCookingMethod(m); setCurrentView(AppView.UPLOAD); }} onBack={() => setCurrentView(activeProfiles.length > 0 ? AppView.FAMILY_SELECTION : AppView.WELCOME)} />}
-      {currentView === AppView.PROFILE_EDITOR && <ProfileEditorScreen initialMember={memberToEdit} onSave={handleSaveMember} onDelete={handleDeleteMember} onCancel={() => setCurrentView(editingReturnView)} />}
+      {currentView === AppView.PROFILE_EDITOR && <ProfileEditorScreen initialMember={memberToEdit} onSave={handleSaveMember} onCancel={() => setCurrentView(editingReturnView)} />}
       
       {currentView === AppView.UPLOAD && <UploadScreen onFileSelected={handleFileSelect} onProfileClick={() => setCurrentView(AppView.PROFILE)} activeProfiles={activeProfiles} cookingMethod={cookingMethod} onChangeContext={() => setCurrentView(AppView.WELCOME)} error={error} onBack={() => setCurrentView(AppView.COOKING_METHOD)} onExploreClick={() => setCurrentView(AppView.EXPLORE)} freeUsageCount={usageCount} maxFreeUses={MAX_FREE_USES} isPro={isPro} />}
       
       {currentView === AppView.EXPLORE && <ExploreScreen onBack={() => setCurrentView(AppView.UPLOAD)} onSelectCategory={handleSelectCategory} isPro={isPro} usageCount={usageCount} maxFreeUses={MAX_FREE_USES} unlockedPacks={unlockedPacks} />}
       
-      {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={handleAddToShoppingList} onToggleItem={handleToggleShoppingItem} onRemoveItem={handleRemoveShoppingItem} onEditItem={handleEditShoppingItem} onClearList={handleClearShoppingList} onBack={() => setCurrentView(lastMainView)} />}
+      {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={() => {}} onToggleItem={() => {}} onRemoveItem={() => {}} onEditItem={() => {}} onClearList={() => {}} onBack={() => setCurrentView(lastMainView)} />}
       
       {currentView === AppView.PROFILE && (
         <ProfileScreen 
@@ -793,7 +371,7 @@ function App() {
             pantryItems={pantryItems} 
             onUpdatePantry={handleUpdatePantry} 
             onSaveProfile={handleSaveMember} 
-            onBack={() => scanResult ? setCurrentView(AppView.RESULTS) : setCurrentView(AppView.UPLOAD)} 
+            onBack={() => setCurrentView(AppView.UPLOAD)} 
             favorites={favoriteRecipes} 
             onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} 
             initialTab={profileInitialTab} 
@@ -804,15 +382,15 @@ function App() {
         />
       )}
       
-      {currentView === AppView.ADMIN_PANEL && !isDemoMode && <AdminPanel onBack={() => setCurrentView(AppView.PROFILE)} currentUserEmail={user?.email} />}
+      {currentView === AppView.ADMIN_PANEL && !isDemoMode && <AdminPanel onBack={() => setCurrentView(AppView.PROFILE)} currentUserEmail={user?.email} showToast={showToast} />}
 
-      {currentView === AppView.TERMS && <TermsScreen onBack={() => setCurrentView(previousView)} />}
-      {currentView === AppView.PRIVACY && <PrivacyScreen onBack={() => setCurrentView(previousView)} />}
+      {currentView === AppView.TERMS && <TermsScreen onBack={() => setCurrentView(AppView.LANDING)} />}
+      {currentView === AppView.PRIVACY && <PrivacyScreen onBack={() => setCurrentView(AppView.LANDING)} />}
 
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
-      {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => { setImagePreview(null); setScanResult(null); setCurrentView(AppView.UPLOAD); }} />}
-      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(recipes.length > 0 && scanResult ? AppView.RESULTS : AppView.EXPLORE)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} cookingMethod={cookingMethod} isExplore={isExploreMode} />}
-      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(AppView.RECIPES)} isFavorite={favoriteRecipes.some(r => r.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={(r) => handleRateRecipe(selectedRecipe, r)} shoppingList={shoppingList} onAddToShoppingList={handleAddToShoppingList} cookingMethod={cookingMethod} onFinishCooking={() => handleFinishCooking(selectedRecipe)} isExplore={isExploreMode} />}
+      {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => setCurrentView(AppView.UPLOAD)} />}
+      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(AppView.EXPLORE)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} cookingMethod={cookingMethod} />}
+      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(AppView.RECIPES)} isFavorite={favoriteRecipes.some(r => r.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={() => {}} shoppingList={shoppingList} onAddToShoppingList={() => {}} cookingMethod={cookingMethod} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
 
       {showBottomMenu && <BottomMenu currentView={currentView} activeTab={profileInitialTab} onNavigate={(v, tab) => { if (tab) setProfileInitialTab(tab); setCurrentView(v); }} />}
     </div>

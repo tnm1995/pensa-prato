@@ -1,5 +1,4 @@
 
-
 export interface Ingredient {
   name: string;
   confidence: number;
@@ -13,6 +12,13 @@ export interface ScanResult {
 export interface TimerBreakdown {
   label: string; // ex: "Cozinhar Arroz", "Assar Frango", "Tempo de Forno"
   minutes: number;
+}
+
+export interface SocialProof {
+    img: string;
+    title: string;
+    user: string;
+    avatar?: string;
 }
 
 export interface Recipe {

@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { db, collection, doc, deleteDoc, updateDoc, setDoc, getDoc } from '../services/firebase';
-import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw, DollarSign, Link as LinkIcon, Save, Calendar, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { FamilyMember } from '../types';
+import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw, DollarSign, Link as LinkIcon, Save, Calendar, CheckCircle2, XCircle, Clock, Layout, Image as ImageIcon, Plus } from 'lucide-react';
+import { FamilyMember, SocialProof } from '../types';
 
 interface AdminPanelProps {
   onBack: () => void;
   currentUserEmail?: string;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 interface UserSummary {
@@ -21,15 +22,14 @@ interface UserSummary {
   subscriptionExpiry?: any; // Firestore Timestamp
 }
 
-// Lista de categorias para configuração
 const KNOWN_CATEGORIES = [
   'Natal', 'Ano Novo', 'Páscoa', 'Festa Junina',
   'Café da Manhã', 'Almoço de Domingo', 'Jantar Romântico', 'Lanche Rápido',
   'Fitness / Saudável', 'Comfort Food', 'Vegetariano', 'Econômicas'
 ];
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'monetization'>('users');
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail, showToast }) => {
+  const [activeTab, setActiveTab] = useState<'users' | 'monetization' | 'landing'>('users');
   
   // User Management State
   const [users, setUsers] = useState<UserSummary[]>([]);
@@ -50,6 +50,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
   });
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
+
+  // Landing Page State
+  const [landingProofs, setLandingProofs] = useState<SocialProof[]>([]);
+  const [loadingLanding, setLoadingLanding] = useState(false);
+  const [savingLanding, setSavingLanding] = useState(false);
 
   // --- USERS LOGIC ---
   const fetchAllUsers = async () => {
@@ -110,7 +115,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
       setUsers(userList);
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
-      alert("Erro ao buscar dados.");
+      if (showToast) showToast("Erro ao buscar dados.", "error");
     } finally {
       setLoadingUsers(false);
     }
@@ -121,7 +126,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
         try {
             await deleteDoc(doc(db, 'users', uid));
             setUsers(users.filter(u => u.uid !== uid));
-        } catch (e) { console.error(e); }
+            if (showToast) showToast("Usuário excluído.", "success");
+        } catch (e) { 
+            console.error(e);
+            if (showToast) showToast("Erro ao excluir usuário.", "error");
+        }
     }
   };
 
@@ -130,7 +139,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
         try {
             await updateDoc(doc(db, 'users', uid), { isAdmin: !currentStatus });
             setUsers(users.map(u => u.uid === uid ? { ...u, isAdmin: !currentStatus } : u));
-        } catch(e) { console.error(e); }
+            if (showToast) showToast(`Admin ${!currentStatus ? 'concedido' : 'removido'}.`, "success");
+        } catch(e) { 
+            console.error(e);
+            if (showToast) showToast("Erro ao alterar permissão.", "error");
+        }
     }
   };
 
@@ -147,7 +160,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
 
           setSelectedUser({ uid, family, pantry, history });
           setViewMode('detail');
-      } catch (e) { console.error(e); } finally { setLoadingUsers(false); }
+      } catch (e) { 
+          console.error(e);
+          if (showToast) showToast("Erro ao carregar detalhes.", "error");
+      } finally { setLoadingUsers(false); }
   };
 
   // --- SUBSCRIPTION LOGIC ---
@@ -172,13 +188,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
 
           await updateDoc(doc(db, 'users', subModalUser.uid), updates);
           
-          // Update local list
           setUsers(users.map(u => u.uid === subModalUser.uid ? { ...u, ...updates } : u));
-          setSubModalUser(null); // Close modal
-          alert("Assinatura atualizada!");
+          setSubModalUser(null);
+          if (showToast) showToast("Assinatura atualizada!", "success");
       } catch (e) {
           console.error("Erro ao atualizar assinatura", e);
-          alert("Erro ao salvar.");
+          if (showToast) showToast("Erro ao salvar assinatura.", "error");
       } finally {
           setSubLoading(false);
       }
@@ -186,14 +201,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
 
   const formatExpiry = (expiry: any) => {
       if (!expiry) return 'Vitalício';
-      // Handle Firestore Timestamp
       const date = expiry.toDate ? expiry.toDate() : new Date(expiry);
       return date.toLocaleDateString('pt-BR');
   };
 
   const isExpired = (user: UserSummary) => {
       if (!user.isPro) return false;
-      if (!user.subscriptionExpiry) return false; // Lifetime
+      if (!user.subscriptionExpiry) return false; 
       const expiry = user.subscriptionExpiry.toDate ? user.subscriptionExpiry.toDate() : new Date(user.subscriptionExpiry);
       return expiry < new Date();
   };
@@ -206,7 +220,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
           if (docSnap.exists) {
               const data = docSnap.data();
               setCheckoutConfig({
-                  proMonthlyUrl: data.proMonthlyUrl || data.proUrl || '', // Fallback backward compatibility
+                  proMonthlyUrl: data.proMonthlyUrl || data.proUrl || '', 
                   proAnnualUrl: data.proAnnualUrl || '',
                   packs: data.packs || {}
               });
@@ -222,10 +236,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
       setSavingConfig(true);
       try {
           await setDoc(doc(db, 'admin_settings', 'checkout'), checkoutConfig);
-          alert("Links de checkout atualizados com sucesso!");
+          if (showToast) showToast("Configurações de venda salvas!", "success");
       } catch (e) {
           console.error("Erro ao salvar config:", e);
-          alert("Erro ao salvar.");
+          if (showToast) showToast("Erro ao salvar configurações.", "error");
       } finally {
           setSavingConfig(false);
       }
@@ -241,9 +255,59 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
       }));
   };
 
+  // --- LANDING LOGIC ---
+  const fetchLanding = async () => {
+      setLoadingLanding(true);
+      try {
+          const docSnap = await getDoc(doc(db, 'admin_settings', 'landing_page'));
+          if (docSnap.exists) {
+              const data = docSnap.data();
+              setLandingProofs(data.socialProofs || []);
+          } else {
+              setLandingProofs([]);
+          }
+      } catch (e) {
+          console.error("Erro landing:", e);
+      } finally {
+          setLoadingLanding(false);
+      }
+  };
+
+  const handleSaveLanding = async () => {
+      setSavingLanding(true);
+      try {
+          await setDoc(doc(db, 'admin_settings', 'landing_page'), { socialProofs: landingProofs });
+          if (showToast) showToast("Conteúdo da Landing Page atualizado!", "success");
+      } catch (e) {
+          console.error(e);
+          if (showToast) showToast("Erro ao salvar Landing Page.", "error");
+      } finally {
+          setSavingLanding(false);
+      }
+  };
+
+  const updateProof = (idx: number, field: keyof SocialProof, val: string) => {
+      const newList = [...landingProofs];
+      newList[idx] = { ...newList[idx], [field]: val };
+      setLandingProofs(newList);
+  };
+
+  const removeProof = (idx: number) => {
+      setLandingProofs(landingProofs.filter((_, i) => i !== idx));
+  };
+
+  const addProof = () => {
+      setLandingProofs([...landingProofs, { 
+          title: 'Novo Prato', 
+          user: 'Nome do Usuário', 
+          img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format&fit=crop' 
+      }]);
+  };
+
   useEffect(() => {
     if (activeTab === 'users') fetchAllUsers();
     if (activeTab === 'monetization') fetchConfig();
+    if (activeTab === 'landing') fetchLanding();
   }, [activeTab]);
 
   const filteredUsers = users.filter(u => 
@@ -252,7 +316,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
     (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // --- RENDER DETAIL VIEW ---
   if (viewMode === 'detail' && selectedUser) {
       return (
           <div className="min-h-screen bg-gray-100 p-6">
@@ -267,9 +330,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                       </div>
                   </div>
                   <div className="p-6 space-y-8">
-                      {/* Details Content */}
                       <div>
-                          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-blue-500" /> Família ({selectedUser.family.length})</h3>
+                          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-gray-600" /> Família ({selectedUser.family.length})</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {selectedUser.family.map((member: FamilyMember, idx: number) => (
                                   <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-200">
@@ -307,13 +369,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
             </div>
         </div>
 
-        {/* TAB NAVIGATION */}
         <div className="flex gap-4 mb-6 border-b border-gray-200 pb-1">
             <button 
                 onClick={() => setActiveTab('users')}
                 className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'users' ? 'bg-white text-emerald-600 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'}`}
             >
                 <Users className="w-4 h-4" /> Usuários
+            </button>
+            <button 
+                onClick={() => setActiveTab('landing')}
+                className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'landing' ? 'bg-white text-emerald-600 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+                <Layout className="w-4 h-4" /> Landing Page
             </button>
             <button 
                 onClick={() => setActiveTab('monetization')}
@@ -323,14 +390,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
             </button>
         </div>
 
-        {/* --- USERS TAB --- */}
         {activeTab === 'users' && (
             <>
-                {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                         <div className="flex justify-between items-start mb-4">
-                            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Users /></div>
+                            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Users /></div>
                         </div>
                         <h3 className="text-3xl font-bold text-gray-900">{users.length}</h3>
                         <p className="text-gray-500 text-sm">Usuários</p>
@@ -396,7 +461,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                                         <td className="px-6 py-4 text-center">
                                             <button 
                                                 onClick={() => handleToggleAdmin(user.uid, user.isAdmin)}
-                                                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${user.isAdmin ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${user.isAdmin ? 'bg-gray-800 text-white hover:bg-gray-900' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                                             >
                                                 {user.isAdmin ? <Shield className="w-3 h-3" /> : null}
                                                 {user.isAdmin ? 'ADMIN' : 'USER'}
@@ -418,7 +483,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                                                 )}
                                                 <button 
                                                     onClick={() => setSubModalUser(user)}
-                                                    className="text-[10px] text-blue-500 hover:underline mt-1"
+                                                    className="text-[10px] text-amber-600 hover:underline mt-1"
                                                 >
                                                     Gerenciar
                                                 </button>
@@ -426,7 +491,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleViewDetails(user.uid)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg">
+                                                <button onClick={() => handleViewDetails(user.uid)} className="p-2 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg">
                                                     <Eye className="w-4 h-4" />
                                                 </button>
                                                 <button onClick={() => handleDeleteUser(user.uid)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg">
@@ -443,7 +508,92 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
             </>
         )}
 
-        {/* --- MONETIZATION TAB --- */}
+        {activeTab === 'landing' && (
+            <div className="animate-in fade-in slide-in-from-bottom-2">
+                 <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-800">Conteúdo da Landing Page</h3>
+                        <p className="text-sm text-gray-500">Gerencie as imagens e depoimentos da comunidade.</p>
+                    </div>
+                    <div className="flex gap-3">
+                         <button 
+                            onClick={addProof}
+                            className="bg-stone-100 text-stone-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-stone-200 transition-colors"
+                        >
+                            <Plus className="w-5 h-5" /> Adicionar
+                        </button>
+                        <button 
+                            onClick={handleSaveLanding}
+                            disabled={savingLanding}
+                            className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:bg-emerald-700 transition-colors disabled:opacity-70"
+                        >
+                            {savingLanding ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                            Salvar Landing
+                        </button>
+                    </div>
+                </div>
+
+                {loadingLanding ? (
+                    <div className="text-center py-20 text-gray-400">Carregando depoimentos...</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {landingProofs.length === 0 && (
+                            <div className="col-span-full py-12 bg-white rounded-3xl border border-dashed border-gray-300 text-center text-gray-400">
+                                Clique em Adicionar para começar a configurar os depoimentos dinâmicos.
+                            </div>
+                        )}
+                        {landingProofs.map((proof, idx) => (
+                            <div key={idx} className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-200 relative group overflow-hidden transition-all hover:shadow-md">
+                                <div className="flex gap-4">
+                                    <div className="w-24 h-24 rounded-2xl bg-gray-100 overflow-hidden shrink-0 border border-gray-100">
+                                        <img src={proof.img} className="w-full h-full object-cover" alt="Preview" />
+                                    </div>
+                                    <div className="flex-1 space-y-3">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Título da Receita</label>
+                                            <input 
+                                                type="text" 
+                                                value={proof.title}
+                                                onChange={e => updateProof(idx, 'title', e.target.value)}
+                                                className="w-full p-2 bg-gray-50 border border-transparent focus:bg-white focus:border-emerald-200 rounded-lg text-sm outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nome do Usuário</label>
+                                            <input 
+                                                type="text" 
+                                                value={proof.user}
+                                                onChange={e => updateProof(idx, 'user', e.target.value)}
+                                                className="w-full p-2 bg-gray-50 border border-transparent focus:bg-white focus:border-emerald-200 rounded-lg text-sm outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 flex items-center gap-1">
+                                        <ImageIcon className="w-3 h-3" /> URL da Imagem
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        value={proof.img}
+                                        onChange={e => updateProof(idx, 'img', e.target.value)}
+                                        placeholder="https://images.unsplash.com/..."
+                                        className="w-full p-2 bg-gray-50 border border-transparent focus:bg-white focus:border-emerald-200 rounded-lg text-xs outline-none font-mono"
+                                    />
+                                </div>
+                                <button 
+                                    onClick={() => removeProof(idx)}
+                                    className="absolute top-4 right-4 p-1.5 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        )}
+
         {activeTab === 'monetization' && (
             <div className="animate-in fade-in slide-in-from-bottom-2">
                 <div className="flex justify-end mb-4">
@@ -461,8 +611,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                     <div className="text-center py-20 text-gray-400">Carregando configurações...</div>
                 ) : (
                     <div className="space-y-6">
-                        
-                        {/* Global PRO Link */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-200 ring-4 ring-emerald-50">
                             <h3 className="text-lg font-bold text-emerald-800 mb-4 flex items-center gap-2">
                                 <Shield className="w-5 h-5" /> Links de Checkout PRO
@@ -500,10 +648,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                             </div>
                         </div>
 
-                        {/* Category Links */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <Database className="w-5 h-5 text-blue-500" /> Pacotes de Categoria (Venda Avulsa)
+                                <Database className="w-5 h-5 text-emerald-500" /> Pacotes de Categoria (Venda Avulsa)
                             </h3>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -519,7 +666,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                                                 placeholder={`Link checkout para ${category}`}
                                                 value={checkoutConfig.packs[category] || ''}
                                                 onChange={(e) => updatePackUrl(category, e.target.value)}
-                                                className="flex-1 p-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-400 outline-none"
+                                                className="flex-1 p-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-amber-400 outline-none"
                                             />
                                         </div>
                                     </div>
@@ -533,7 +680,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
 
       </div>
 
-      {/* MODAL: GERENCIAR ASSINATURA */}
       {subModalUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
@@ -574,9 +720,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                       <button 
                         onClick={() => handleUpdateSubscription('year')}
                         disabled={subLoading}
-                        className="w-full p-3 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-200 text-left flex items-center gap-3 transition-colors"
+                        className="w-full p-3 rounded-xl border border-gray-200 hover:bg-amber-50 hover:border-amber-200 text-left flex items-center gap-3 transition-colors"
                       >
-                          <div className="p-2 bg-blue-100 rounded-lg"><Calendar className="w-5 h-5 text-blue-600" /></div>
+                          <div className="p-2 bg-amber-100 rounded-lg"><Calendar className="w-5 h-5 text-amber-600" /></div>
                           <div>
                               <p className="font-bold text-gray-800">Adicionar 1 Ano</p>
                               <p className="text-xs text-gray-500">Plano Anual</p>
@@ -586,9 +732,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                        <button 
                         onClick={() => handleUpdateSubscription('lifetime')}
                         disabled={subLoading}
-                        className="w-full p-3 rounded-xl border border-gray-200 hover:bg-purple-50 hover:border-purple-200 text-left flex items-center gap-3 transition-colors"
+                        className="w-full p-3 rounded-xl border border-gray-200 hover:bg-gray-100 hover:border-gray-300 text-left flex items-center gap-3 transition-colors"
                       >
-                          <div className="p-2 bg-purple-100 rounded-lg"><Clock className="w-5 h-5 text-purple-600" /></div>
+                          <div className="p-2 bg-gray-200 rounded-lg"><Clock className="w-5 h-5 text-gray-600" /></div>
                           <div>
                               <p className="font-bold text-gray-800">Vitalício</p>
                               <p className="text-xs text-gray-500">Sem data de expiração</p>

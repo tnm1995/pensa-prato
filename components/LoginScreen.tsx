@@ -39,13 +39,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     setLoading(true);
     setError(null);
+    
+    // SAFETY TIMEOUT: Force stop loading after 15 seconds if stuck
+    const safetyTimeout = setTimeout(() => {
+        if (loading) {
+            setLoading(false);
+            setError("Tempo limite de conexão excedido. Tente novamente.");
+        }
+    }, 15000);
+
     try {
       // Note: We rely on Firebase's default 'local' persistence to avoid build issues with explicit setPersistence calls
       
       await signInWithPopup(auth, googleProvider);
-      setLoading(false); // Clean up loading state before navigating
+      clearTimeout(safetyTimeout);
       onLoginSuccess();
     } catch (err: any) {
+      clearTimeout(safetyTimeout);
       console.error("Erro no login com Google:", err);
       
       if (err.code === 'auth/operation-not-supported-in-this-environment') {
@@ -57,7 +67,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       } else {
          setError("Erro ao conectar com o Google. Tente novamente.");
       }
-      
+    } finally {
+      // FORCE LOADING TO FALSE - Prevent infinite spinner
       setLoading(false);
     }
   };
@@ -71,6 +82,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     setLoading(true);
     setError(null);
+    
+    // SAFETY TIMEOUT
+    const safetyTimeout = setTimeout(() => {
+        if (loading) {
+            setLoading(false);
+            setError("Tempo limite de conexão excedido. Tente novamente.");
+        }
+    }, 15000);
+
     try {
       if (rememberMe) {
         localStorage.setItem('pensa_prato_saved_email', email);
@@ -79,9 +99,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       }
 
       await signInWithEmailAndPassword(auth, email, password);
-      setLoading(false); // Clean up loading state before navigating
+      clearTimeout(safetyTimeout);
       onLoginSuccess();
     } catch (err: any) {
+      clearTimeout(safetyTimeout);
       console.error("Erro no login:", err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setError("E-mail ou senha incorretos.");
@@ -90,7 +111,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       } else {
         setError("Erro ao fazer login. Verifique sua conexão.");
       }
-      setLoading(false);
+    } finally {
+       // FORCE LOADING TO FALSE - Prevent infinite spinner
+       setLoading(false);
     }
   };
 

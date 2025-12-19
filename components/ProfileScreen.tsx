@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, ChevronDown, ChevronUp, Package, Shield } from 'lucide-react';
 import { Recipe, FamilyMember } from '../types';
@@ -106,7 +107,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   
   // Stats vinculados aos dados reais
   const stats = [
-    { label: "Receitas Feitas", value: recipesCount.toString(), icon: ChefHat, color: "text-blue-500", bg: "bg-blue-50" }, 
+    { label: "Receitas Feitas", value: recipesCount.toString(), icon: ChefHat, color: "text-orange-500", bg: "bg-orange-50" }, 
     { 
         label: "Na Despensa", 
         value: pantryItems.length.toString(), 
@@ -217,7 +218,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {isAdmin && onOpenAdmin ? (
              <button 
                 onClick={onOpenAdmin} 
-                className="bg-purple-100 text-purple-800 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 hover:bg-purple-200 transition-colors border border-purple-200"
+                className="bg-gray-800 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 hover:bg-gray-900 transition-colors border border-gray-700"
              >
                 <Shield className="w-3 h-3" />
                 Admin
@@ -258,18 +259,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <div className="space-y-4">
             
             {/* Pantry Section */}
-            <div ref={pantryRef} className={`bg-white rounded-[1.5rem] shadow-sm border overflow-hidden p-6 transition-colors ${pantryItems.length === 0 ? 'border-blue-200 ring-2 ring-blue-50' : 'border-gray-100'}`}>
+            <div ref={pantryRef} className={`bg-white rounded-[1.5rem] shadow-sm border overflow-hidden p-6 transition-colors ${pantryItems.length === 0 ? 'border-amber-200 ring-2 ring-amber-50' : 'border-gray-100'}`}>
                 <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <Package className="w-5 h-5 text-blue-500" />
+                    <Package className="w-5 h-5 text-amber-500" />
                     Despensa Permanente
                 </h3>
                 
                 <button
                     onClick={() => setShowPantryOptions(!showPantryOptions)}
-                    className="w-full flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100/50 border border-blue-100 rounded-xl transition-all group mb-4"
+                    className="w-full flex items-center justify-between p-4 bg-amber-50 hover:bg-amber-100/50 border border-amber-100 rounded-xl transition-all group mb-4"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white rounded-full text-blue-600 shadow-sm">
+                        <div className="p-2 bg-white rounded-full text-amber-600 shadow-sm">
                             <Scale className="w-4 h-4" />
                         </div>
                         <div className="text-left">
@@ -296,7 +297,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                         onClick={() => togglePantryItem(item)}
                                         className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
                                             hasItem 
-                                            ? 'bg-blue-50 border-blue-500 text-white shadow-sm' 
+                                            ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm' 
                                             : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
                                         }`}
                                     >
@@ -390,7 +391,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <div className="bg-white rounded-[1.5rem] shadow-sm border border-gray-100 overflow-hidden">
                     <button className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors text-left">
                     <div className="flex items-center gap-4">
-                        <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600"><ChefHat className="w-5 h-5" /></div>
+                        <div className="p-2.5 bg-gray-100 rounded-xl text-gray-600"><ChefHat className="w-5 h-5" /></div>
                         <span className="font-bold text-gray-800">Ajuda e Suporte</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-300" />
@@ -401,16 +402,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {isAdmin && onOpenAdmin && (
                 <button 
                     onClick={onOpenAdmin}
-                    className="w-full bg-purple-50 text-purple-700 border-2 border-purple-100 font-bold p-4 rounded-[1.5rem] flex items-center justify-between hover:bg-purple-100 transition-colors shadow-sm group animate-in zoom-in duration-300"
+                    className="w-full bg-gray-800 text-white border-2 border-gray-900 font-bold p-4 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-900 transition-colors shadow-sm group animate-in zoom-in duration-300"
                 >
                     <div className="flex items-center gap-4">
-                        <div className="p-2.5 bg-purple-200 rounded-xl text-purple-700 shadow-sm"><Shield className="w-6 h-6" /></div>
+                        <div className="p-2.5 bg-gray-700 rounded-xl text-gray-300 shadow-sm"><Shield className="w-6 h-6" /></div>
                         <div className="text-left">
                             <span className="block font-bold text-lg">Painel Administrativo</span>
                             <span className="block text-xs font-medium opacity-70">Gerenciar usuários e dados</span>
                         </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-purple-400 group-hover:text-purple-600 transition-colors" />
+                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
                 </button>
             )}
 
