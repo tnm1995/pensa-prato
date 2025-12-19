@@ -47,18 +47,18 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectAny, onSel
           {/* Bottom Button: Family */}
           <button
             onClick={onSelectFamily}
-            className="group relative bg-white rounded-3xl p-6 transition-all duration-300 flex flex-row items-center text-left shadow-lg shadow-emerald-900/5 hover:shadow-xl hover:shadow-emerald-900/10 active:scale-[0.98] border border-transparent hover:border-emerald-100"
+            className="group relative bg-white rounded-3xl p-6 transition-all duration-300 flex flex-row items-center text-left shadow-lg shadow-emerald-900/5 hover:shadow-xl hover:shadow-emerald-900/10 active:scale-[0.98] border border-transparent hover:border-amber-100"
           >
-            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mr-5 group-hover:bg-blue-100 transition-colors shrink-0">
+            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mr-5 group-hover:bg-amber-100 transition-colors shrink-0">
               <div className="relative">
-                  <Home className="w-8 h-8 text-blue-600" />
-                  <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-sm border border-blue-50">
-                       <Users className="w-3 h-3 text-blue-600" />
+                  <Home className="w-8 h-8 text-amber-600" />
+                  <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-sm border border-amber-50">
+                       <Users className="w-3 h-3 text-amber-600" />
                   </div>
               </div>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-1 group-hover:text-blue-700 transition-colors">Família</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-1 group-hover:text-amber-700 transition-colors">Família</h2>
               <p className="text-xs text-gray-500 font-medium">Adaptado para as restrições de cada um.</p>
             </div>
           </button>

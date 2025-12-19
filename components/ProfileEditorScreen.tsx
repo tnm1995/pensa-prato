@@ -258,16 +258,16 @@ export const ProfileEditorScreen: React.FC<ProfileEditorScreenProps> = ({ onSave
           {/* Baby Mode Toggle */}
           <div 
             onClick={() => setIsBabyMode(!isBabyMode)}
-            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${isBabyMode ? 'bg-blue-50 border-blue-400' : 'bg-white border-gray-100'}`}
+            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${isBabyMode ? 'bg-amber-50 border-amber-400' : 'bg-white border-gray-100'}`}
           >
-            <div className={`p-2 rounded-full ${isBabyMode ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+            <div className={`p-2 rounded-full ${isBabyMode ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
                  <Baby className="w-6 h-6" />
             </div>
             <div className="flex-1">
-                <p className={`font-bold ${isBabyMode ? 'text-blue-800' : 'text-gray-700'}`}>Modo Bebê (0-2 anos)</p>
+                <p className={`font-bold ${isBabyMode ? 'text-amber-800' : 'text-gray-700'}`}>Modo Bebê (0-2 anos)</p>
                 <p className="text-xs text-gray-500">Preenche automaticamente restrições de segurança.</p>
             </div>
-            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isBabyMode ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isBabyMode ? 'border-amber-500 bg-amber-500' : 'border-gray-300'}`}>
                 {isBabyMode && <div className="w-2 h-2 bg-white rounded-full" />}
             </div>
           </div>
@@ -305,7 +305,7 @@ export const ProfileEditorScreen: React.FC<ProfileEditorScreenProps> = ({ onSave
                     placeholder="Ex: cebola, coentro, pimentão, quiabo..."
                     className="w-full p-4 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all bg-gray-50 h-24 resize-none"
                     />
-                    {isBabyMode && <p className="text-[10px] text-blue-600 mt-1">* Itens perigosos adicionados automaticamente.</p>}
+                    {isBabyMode && <p className="text-[10px] text-amber-600 mt-1">* Itens perigosos adicionados automaticamente.</p>}
                 </div>
 
                 {/* Restrictions Toggles */}
@@ -330,7 +330,7 @@ export const ProfileEditorScreen: React.FC<ProfileEditorScreenProps> = ({ onSave
                         );
                     })}
                     {isBabyMode && restrictions.includes("Sem Açúcar") && (
-                        <span className="px-4 py-2 rounded-full text-sm font-medium border bg-blue-50 border-blue-200 text-blue-600 shadow-sm">
+                        <span className="px-4 py-2 rounded-full text-sm font-medium border bg-amber-50 border-amber-200 text-amber-600 shadow-sm">
                             Sem Açúcar (Auto)
                         </span>
                     )}
