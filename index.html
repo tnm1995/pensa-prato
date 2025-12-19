@@ -6,27 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     
     <!-- PWA & Mobile Theme -->
-    <title>Pensa Prato | Seu Chef Inteligente</title>
-    <meta name="description" content="Tire uma foto da sua geladeira e descubra receitas incríveis. O Pensa Prato usa Inteligência Artificial para criar pratos com o que você já tem." />
+    <title>Geladeira Cheia | Seu Chef Inteligente</title>
+    <meta name="description" content="Tire uma foto da sua geladeira e descubra receitas incríveis. O Geladeira Cheia usa Inteligência Artificial para criar pratos com o que você já tem." />
     <meta name="theme-color" content="#00C853" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2300C853' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z'/%3E%3Cline x1='6' y1='17' x2='18' y2='17'/%3E%3C/svg%3E">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 24 24' fill='none' stroke='%2300C853' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z'/%3E%3Cline x1='6' y1='17' x2='18' y2='17'/%3E%3C/svg%3E">
-
-    <!-- Open Graph / Facebook / WhatsApp -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://pensaprato.app/" />
-    <meta property="og:title" content="Pensa Prato - Cozinhe com IA" />
-    <meta property="og:description" content="Não sabe o que cozinhar? O Pensa Prato analisa seus ingredientes e sugere receitas deliciosas em segundos." />
-    <meta property="og:image" content="https://images.unsplash.com/photo-1556910103-1c02745a30bf?q=80&w=1200&auto=format&fit=crop" />
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://pensaprato.app/" />
-    <meta property="twitter:title" content="Pensa Prato - Cozinhe com IA" />
-    <meta property="twitter:description" content="Descubra receitas com o que você tem na geladeira usando Inteligência Artificial." />
-    <meta property="twitter:image" content="https://images.unsplash.com/photo-1556910103-1c02745a30bf?q=80&w=1200&auto=format&fit=crop" />
-
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,46 +19,35 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #f3f4f6;
-        -webkit-tap-highlight-color: transparent; /* Remove highlight on mobile tap */
+        background-color: #f8fafc;
+        -webkit-tap-highlight-color: transparent;
       }
-
-      /* Custom Scrollbar Styling */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
-      ::-webkit-scrollbar-thumb {
-        background-color: #cbd5e1; /* gray-300 */
-        border-radius: 20px;
-        border: 2px solid transparent;
-        background-clip: content-box;
-      }
-
-      ::-webkit-scrollbar-thumb:hover {
-        background-color: #94a3b8; /* gray-400 */
-      }
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; border: 2px solid transparent; background-clip: content-box; }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react": "https://esm.sh/react@18.2.0",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "@mui/material": "https://esm.sh/@mui/material@5.15.10?external=react,react-dom",
+    "@mui/material/": "https://esm.sh/@mui/material@5.15.10/",
+    "@emotion/react": "https://esm.sh/@emotion/react@11.11.3?external=react,react-dom",
+    "@emotion/styled": "https://esm.sh/@emotion/styled@11.11.0?external=react,react-dom",
+    "lucide-react": "https://esm.sh/lucide-react@0.454.0?external=react,react-dom",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/",
-    "framer-motion": "https://esm.sh/framer-motion@^12.23.26?external=react,react-dom"
+    "framer-motion": "https://esm.sh/framer-motion@^12.23.26?external=react,react-dom",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+    "firebase/": "https://esm.sh/firebase@^10.8.0/"
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>

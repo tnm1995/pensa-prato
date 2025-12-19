@@ -1,6 +1,34 @@
-import React, { useRef, useState } from 'react';
-import { Camera, Upload, Image as ImageIcon, ScanLine, Wind, Flame, ChefHat, UtensilsCrossed, ChevronDown, AlertCircle, ArrowLeft, Compass, Zap, Lock, MoreHorizontal, Star } from 'lucide-react';
+
+import React, { useRef, useState, useEffect } from 'react';
+import { 
+  Box, 
+  Button, 
+  Typography, 
+  IconButton, 
+  Avatar, 
+  AvatarGroup, 
+  Paper,
+  Alert,
+  Fade
+} from '@mui/material';
+import { 
+  Camera, 
+  Upload, 
+  Image as ImageIcon, 
+  ScanLine, 
+  Wind, 
+  Flame, 
+  ChefHat, 
+  UtensilsCrossed, 
+  ChevronDown, 
+  AlertCircle, 
+  ArrowLeft, 
+  Compass, 
+  Zap, 
+  Trash2
+} from 'lucide-react';
 import { FamilyMember, CookingMethod } from '../types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface UploadScreenProps {
   onFileSelected: (file: File) => void;
@@ -19,307 +47,260 @@ interface UploadScreenProps {
 export const UploadScreen: React.FC<UploadScreenProps> = ({ 
     onFileSelected, 
     onProfileClick, 
-    activeProfiles, 
+    activeProfiles = [], 
     cookingMethod, 
     onChangeContext,
     error,
     onBack,
     onExploreClick,
-    freeUsageCount,
-    maxFreeUses,
+    freeUsageCount = 0,
+    maxFreeUses = 3,
     isPro
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [persistedImage, setPersistedImage] = useState<string | null>(null);
 
-  // Combine restrictions for display
-  const allRestrictions = [...new Set(activeProfiles.flatMap(p => p.restrictions || []))];
-
-  const inspirations = [
-    {
-        img: "https://images.unsplash.com/photo-1626202167732-2d1ec7ab7445?q=80&w=800&auto=format&fit=crop",
-        title: "Escondidinho",
-        user: "Fernanda L."
-    },
-    {
-        img: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?q=80&w=800&auto=format&fit=crop",
-        title: "Moqueca",
-        user: "Thiago S."
-    },
-    {
-        img: "https://images.unsplash.com/photo-1626804475315-9988a034222c?q=80&w=800&auto=format&fit=crop",
-        title: "Arroz Cremoso",
-        user: "Carla D."
-    },
-    {
-        img: "https://images.unsplash.com/photo-1604432299882-990a42428c03?q=80&w=800&auto=format&fit=crop",
-        title: "Picadinho",
-        user: "Rodrigo M."
-    },
-    {
-        img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=800&auto=format&fit=crop",
-        title: "Salada Colorida",
-        user: "Ana J."
+  useEffect(() => {
+    try {
+        const saved = sessionStorage.getItem('gc_last_upload');
+        if (saved) setPersistedImage(saved);
+    } catch (e) {
+        console.warn("SessionStorage blocked or full");
     }
-  ];
+  }, []);
+
+  const allRestrictions = [...new Set(activeProfiles.flatMap(p => p.restrictions || []))];
 
   const getMethodIcon = () => {
     switch(cookingMethod) {
-        case CookingMethod.AIRFRYER: return <Wind className="w-3 h-3 text-emerald-600" />;
-        case CookingMethod.STOVE: return <Flame className="w-3 h-3 text-orange-500" />;
-        case CookingMethod.OVEN: return <ChefHat className="w-3 h-3 text-amber-600" />;
-        default: return <UtensilsCrossed className="w-3 h-3 text-stone-400" />;
+        case CookingMethod.AIRFRYER: return <Wind size={16} className="text-emerald-600" />;
+        case CookingMethod.STOVE: return <Flame size={16} className="text-orange-500" />;
+        case CookingMethod.OVEN: return <ChefHat size={16} className="text-amber-600" />;
+        default: return <UtensilsCrossed size={16} className="text-stone-400" />;
     }
+  };
+
+  const processFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setPersistedImage(result);
+      try {
+          sessionStorage.setItem('gc_last_upload', result);
+      } catch(e) {}
+      onFileSelected(file);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      onFileSelected(e.target.files[0]);
+      processFile(e.target.files[0]);
     }
   };
 
   const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    e.preventDefault(); e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+    else if (e.type === "dragleave") setDragActive(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onFileSelected(e.dataTransfer.files[0]);
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
+  const triggerFileInput = () => fileInputRef.current?.click();
 
-  const renderAvatar = (profile: FamilyMember) => {
-    const isImage = profile.avatar && (profile.avatar.startsWith('http') || profile.avatar.startsWith('data:'));
-    if (isImage && profile.avatar) {
-        return <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />;
-    }
-    if (profile.avatar) {
-        return <div className="w-full h-full flex items-center justify-center bg-white text-xs select-none">{profile.avatar}</div>;
-    }
-    return <img src={`https://ui-avatars.com/api/?name=${profile.name}&background=random&color=fff`} alt={profile.name} className="w-full h-full object-cover" />;
+  const clearImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPersistedImage(null);
+    try {
+        sessionStorage.removeItem('gc_last_upload');
+    } catch(e) {}
   };
 
   const remaining = Math.max(0, maxFreeUses - freeUsageCount);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#FDFCF8] relative overflow-x-hidden font-['Sora'] pb-20">
+    <Box sx={{ 
+      display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#FDFCF8', pb: 10,
+      fontFamily: '"Sora", sans-serif'
+    }}>
       
-      {/* --- HEADER --- */}
-      <div className="px-6 pt-6 pb-2 flex items-center justify-between z-20">
-        <button 
+      <Box sx={{ px: 3, pt: 3, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20 }}>
+        <IconButton 
             onClick={onBack} 
-            className="p-3 bg-white border border-stone-100 shadow-sm rounded-full text-stone-600 hover:text-emerald-700 hover:border-emerald-200 transition-all active:scale-95"
+            sx={{ bgcolor: 'white', boxShadow: 1, border: '1px solid #f1f5f9', '&:hover': { bgcolor: '#f8fafc', color: '#059669' } }}
         >
-            <ArrowLeft className="w-5 h-5" />
-        </button>
+            <ArrowLeft size={20} />
+        </IconButton>
         
         {isPro ? (
-            <div className="flex items-center gap-2 bg-stone-900 text-white pl-3 pr-4 py-2 rounded-full text-xs font-bold shadow-sm">
-                <Zap className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" /> 
-                <span>PRO ATIVO</span>
-            </div>
+            <Box sx={{ 
+                display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#171717', color: 'white', 
+                pl: 1.5, pr: 2, py: 1, borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 
+            }}>
+                <Zap size={14} fill="#fbbf24" color="#fbbf24" /> PRO ATIVO
+            </Box>
         ) : (
-            <div className="flex items-center gap-2 bg-white border border-stone-200 text-stone-600 pl-3 pr-4 py-2 rounded-full text-xs font-medium shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-emerald-50 animate-pulse"></span>
-                <span>{remaining} restantes</span>
-            </div>
+            <Box sx={{ 
+                display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'white', border: '1px solid #e2e8f0', 
+                color: '#4b5563', pl: 1.5, pr: 2, py: 1, borderRadius: 20, fontSize: '0.75rem', fontWeight: 500 
+            }}>
+                <Box component="span" sx={{ width: 8, height: 8, bgcolor: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+                {String(remaining)} restantes
+            </Box>
         )}
-      </div>
+      </Box>
 
-      <div className="flex-1 flex flex-col px-6 relative z-10 max-w-lg mx-auto w-full pt-4">
+      <Box component="main" sx={{ flex: 1, px: 3, mt: 2, maxWidth: 500, mx: 'auto', width: '100%' }}>
         
-        {/* --- CONTEXT CARD --- */}
-        <button 
+        <Paper 
             onClick={onChangeContext}
-            className="w-full bg-white p-4 rounded-3xl shadow-sm border border-stone-100 hover:border-emerald-200 hover:shadow-md transition-all duration-300 flex items-center justify-between group mb-8"
+            elevation={0}
+            sx={{ 
+                p: 2, borderRadius: 6, border: '1px solid #f1f5f9', bgcolor: 'white', mb: 4,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': { borderColor: '#10b981', boxShadow: '0 4px 20px -5px rgba(16, 185, 129, 0.1)' }
+            }}
         >
-            <div className="flex items-center gap-4 overflow-hidden">
-                {/* Avatar Stack */}
-                <div className="flex -space-x-3 pl-1 shrink-0">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, overflow: 'hidden' }}>
+                <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 40, height: 40, border: '2px solid white' } }}>
                     {activeProfiles.length > 0 ? (
-                        activeProfiles.slice(0, 3).map((profile, i) => (
-                             <div key={i} className="w-11 h-11 rounded-full bg-stone-100 border-2 border-white ring-1 ring-stone-50 overflow-hidden relative z-10 flex items-center justify-center shadow-sm">
-                                {renderAvatar(profile)}
-                            </div>
+                        activeProfiles.map((p, i) => (
+                            <Avatar key={p.id || i} src={p.avatar} alt={p.name}>
+                                {!p.avatar && p.name ? p.name.charAt(0) : '?'}
+                            </Avatar>
                         ))
                     ) : (
-                        <div className="w-11 h-11 rounded-full bg-stone-50 border-2 border-white flex items-center justify-center text-stone-300 ring-1 ring-stone-100">
-                            <UtensilsCrossed className="w-5 h-5" />
-                        </div>
+                        <Avatar sx={{ bgcolor: '#f8fafc', color: '#94a3b8' }}><UtensilsCrossed size={20} /></Avatar>
                     )}
-                    {activeProfiles.length > 3 && (
-                        <div className="w-11 h-11 rounded-full bg-stone-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-stone-500 relative z-20 ring-1 ring-stone-50">
-                            +{activeProfiles.length - 3}
-                        </div>
-                    )}
-                </div>
+                </AvatarGroup>
                 
-                <div className="text-left flex-1 min-w-0">
-                    <p className="text-sm font-bold text-stone-800 truncate">
+                <Box sx={{ textAlign: 'left' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1f2937', lineHeight: 1.2 }}>
                         {activeProfiles.length === 0 ? "Para quem?" : 
-                         activeProfiles.length === 1 ? activeProfiles[0].name : 
-                         "Família & Amigos"
-                        }
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-stone-500 bg-stone-50 px-2 py-1 rounded-md border border-stone-100">
+                         activeProfiles.length === 1 ? activeProfiles[0].name : "Família & Amigos"}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, borderRadius: 1, bgcolor: '#f8fafc', border: '1px solid #f1f5f9' }}>
                             {getMethodIcon()}
-                            <span>{cookingMethod === CookingMethod.ANY ? 'Livre' : cookingMethod}</span>
-                         </div>
+                            <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b' }}>
+                                {cookingMethod === CookingMethod.ANY ? 'Livre' : String(cookingMethod)}
+                            </Typography>
+                         </Box>
                          {allRestrictions.length > 0 && (
-                            <span className="text-[10px] text-red-600 bg-red-50 px-2 py-1 rounded-md font-bold border border-red-100 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                {allRestrictions.length}
-                            </span>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, borderRadius: 1, bgcolor: '#fef2f2', border: '1px solid #fee2e2' }}>
+                                <AlertCircle size={10} className="text-red-500" />
+                                <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#ef4444' }}>
+                                    {String(allRestrictions.length)}
+                                </Typography>
+                            </Box>
                          )}
-                    </div>
-                </div>
-            </div>
+                    </Box>
+                </Box>
+            </Box>
+            <ChevronDown size={20} className="text-stone-300" />
+        </Paper>
+
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Typography variant="h4" sx={{ fontWeight: 900, color: '#111827', mb: 1, letterSpacing: '-0.02em' }}>
+                Geladeira Cheia?
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#6b7280', fontWeight: 500 }}>
+                Aponte a câmera e deixe a IA criar a mágica.
+            </Typography>
+        </Box>
+
+        <Box
+            onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
+            onClick={triggerFileInput}
+            sx={{
+                position: 'relative', aspectRatio: '4/5', maxHeight: 380, width: '100%', borderRadius: 10, border: '3px dashed',
+                borderColor: dragActive ? '#10b981' : persistedImage ? '#10b981' : '#e2e8f0',
+                bgcolor: dragActive ? '#f0fdf4' : 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', overflow: 'hidden', transition: 'all 0.4s ease',
+                boxShadow: persistedImage ? '0 10px 40px -10px rgba(16, 185, 129, 0.15)' : '0 10px 20px -5px rgba(0,0,0,0.05)',
+                '&:hover': { borderColor: '#10b981', transform: 'translateY(-4px)', boxShadow: '0 20px 50px -15px rgba(16, 185, 129, 0.15)' }
+            }}
+        >
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
             
-            <div className="p-2 bg-stone-50 rounded-full text-stone-300 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
-                <ChevronDown className="w-5 h-5" />
-            </div>
-        </button>
+            <AnimatePresence mode="wait">
+                {persistedImage ? (
+                    <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ width: '100%', height: '100%', position: 'relative' }}>
+                        <img src={persistedImage} alt="Scan Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                             <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: 5, boxShadow: 10 }}>
+                                <ScanLine size={32} className="text-emerald-600 mb-2 mx-auto animate-bounce" />
+                                <Typography sx={{ fontWeight: 800, color: '#111827', fontSize: '0.875rem' }}>Imagem pronta!</Typography>
+                                <Button size="small" variant="text" color="error" startIcon={<Trash2 size={14} />} onClick={clearImage} sx={{ mt: 1, fontWeight: 700 }}>Trocar</Button>
+                             </Box>
+                        </Box>
+                    </motion.div>
+                ) : (
+                    <motion.div key="upload" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Box sx={{ width: 80, height: 80, bgcolor: '#f8fafc', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3, border: '1px solid #f1f5f9' }}>
+                            <Camera size={32} className="text-slate-400" />
+                        </Box>
+                        <Button variant="contained" startIcon={<ScanLine size={18} />} sx={{ bgcolor: '#171717', color: 'white', px: 4, py: 1.5, borderRadius: 3, fontWeight: 800, textTransform: 'none', '&:hover': { bgcolor: '#000' } }}>Abrir Câmera</Button>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, mt: 4, color: '#94a3b8' }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                                <ImageIcon size={20} />
+                                <Typography sx={{ fontSize: '0.6rem', fontWeight: 800 }}>GALERIA</Typography>
+                            </Box>
+                            <Box sx={{ height: 24, width: 1, bgcolor: '#f1f5f9' }} />
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                                <Upload size={20} />
+                                <Typography sx={{ fontSize: '0.6rem', fontWeight: 800 }}>ARQUIVO</Typography>
+                            </Box>
+                        </Box>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </Box>
 
-        {/* --- MAIN ACTION AREA --- */}
-        <div className="flex-1 flex flex-col justify-start pb-6">
-            <div className="text-center mb-8">
-                <h1 className="text-3xl font-extrabold text-stone-900 mb-2 tracking-tight">O que tem pra hoje?</h1>
-                <p className="text-stone-500 font-medium">Tire uma foto dos ingredientes e deixe a mágica acontecer.</p>
-            </div>
+        <Button 
+            fullWidth onClick={onExploreClick}
+            sx={{ 
+                mt: 3, p: 2, bgcolor: 'white', border: '1px solid #e2e8f0', borderRadius: 4,
+                textTransform: 'none', color: '#1f2937', justifyContent: 'space-between',
+                '&:hover': { bgcolor: '#f8fafc', borderColor: '#cbd5e1' }
+            }}
+        >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ p: 1, bgcolor: '#fffbeb', borderRadius: 2, color: '#d97706', border: '1px solid #fef3c7' }}>
+                    <Compass size={20} />
+                </Box>
+                <Box sx={{ textAlign: 'left' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Sem ingredientes?</Typography>
+                    <Typography variant="caption" sx={{ color: '#6b7280' }}>Explore por categorias</Typography>
+                </Box>
+            </Box>
+            <ArrowLeft size={18} className="rotate-180 text-stone-300" />
+        </Button>
 
-            <div
-                className={`relative group cursor-pointer bg-white rounded-[2.5rem] shadow-xl transition-all duration-500 aspect-[4/5] max-h-[360px] flex flex-col items-center justify-center overflow-hidden border-[3px] border-dashed ${
-                    dragActive 
-                    ? "border-emerald-500 bg-emerald-50 scale-[1.02]" 
-                    : "border-stone-100 hover:border-emerald-300 hover:shadow-2xl hover:shadow-emerald-100"
-                }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                onClick={triggerFileInput}
-            >
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileChange}
-                />
-                
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-                    <div className="w-64 h-64 bg-emerald-50 rounded-full blur-3xl animate-pulse"></div>
-                </div>
+        {error && (
+            <Fade in={Boolean(error)}>
+                <Alert severity="error" icon={<AlertCircle size={20} />} sx={{ mt: 3, borderRadius: 4, fontWeight: 600 }}>{error}</Alert>
+            </Fade>
+        )}
 
-                <div className="relative z-10 flex flex-col items-center">
-                    <div className="w-24 h-24 bg-stone-50 rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 group-hover:bg-emerald-100 shadow-sm group-hover:shadow-lg ring-4 ring-white">
-                        <Camera className="w-10 h-10 text-stone-400 group-hover:text-emerald-600 transition-colors" />
-                    </div>
-                    
-                    <button className="bg-stone-900 text-white px-8 py-4 rounded-2xl font-bold text-sm shadow-lg hover:bg-black transition-all active:scale-95 flex items-center gap-2 group-hover:translate-y-[-2px]">
-                        <ScanLine className="w-4 h-4" />
-                        Abrir Câmera
-                    </button>
-                    
-                    <div className="mt-6 flex items-center gap-6 text-stone-400">
-                        <div className="flex flex-col items-center gap-1 hover:text-emerald-600 transition-colors" onClick={(e) => { e.stopPropagation(); triggerFileInput(); }}>
-                            <div className="p-2 bg-stone-50 rounded-xl group-hover:bg-white group-hover:shadow-sm transition-all"><ImageIcon className="w-5 h-5" /></div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Galeria</span>
-                        </div>
-                        <div className="w-px h-8 bg-stone-100"></div>
-                        <div className="flex flex-col items-center gap-1 hover:text-emerald-600 transition-colors">
-                            <div className="p-2 bg-stone-50 rounded-xl group-hover:bg-white group-hover:shadow-sm transition-all"><Upload className="w-5 h-5" /></div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Arquivo</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <button 
-                onClick={onExploreClick}
-                className="mt-6 w-full bg-white hover:bg-stone-50 border border-stone-200 rounded-2xl p-4 flex items-center justify-between group transition-all shadow-sm hover:shadow-md"
-            >
-                <div className="flex items-center gap-4">
-                    <div className="p-2.5 bg-yellow-50 text-yellow-600 rounded-xl border border-yellow-100">
-                        <Compass className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                        <h3 className="text-sm font-bold text-stone-800">Sem ingredientes?</h3>
-                        <p className="text-[11px] text-stone-500">Explore receitas por categoria</p>
-                    </div>
-                </div>
-                <div className="bg-stone-100 p-2 rounded-full text-stone-400 group-hover:text-emerald-600 group-hover:bg-emerald-50 transition-colors">
-                    <ArrowLeft className="w-4 h-4 rotate-180" />
-                </div>
-            </button>
-
-            {error && (
-                <div className="mt-4 w-full p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-medium flex items-center gap-3 animate-in slide-in-from-bottom-2 shadow-sm">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                    <span>{error}</span>
-                </div>
-            )}
-
-            {/* --- INSPIRATION CAROUSEL --- */}
-            <div className="mt-8 mb-4">
-                <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest text-center mb-4 flex items-center justify-center gap-2 opacity-80">
-                    <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-                    Feito pela comunidade hoje
-                    <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-                </p>
-                
-                <div className="w-full inline-flex flex-nowrap overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] py-8">
-                    {[0, 1].map((arr) => (
-                        <ul key={arr} className="flex items-center justify-center md:justify-start [&_li]:mx-3 animate-infinite-scroll-slow">
-                            {inspirations.map((item, idx) => (
-                                <li key={`${arr}-${idx}`} className="flex-shrink-0">
-                                    <div className="w-32 bg-white rounded-2xl p-2 shadow-sm border border-stone-100 flex flex-col hover:scale-110 transition-transform duration-300">
-                                        <div className="h-24 rounded-xl overflow-hidden mb-2 relative bg-stone-100">
-                                            <img src={item.img} alt={item.title} className="w-full h-full object-cover" />
-                                        </div>
-                                        <div className="px-1 text-center pb-1">
-                                            <p className="font-bold text-[10px] text-stone-800 leading-tight truncate">{item.title}</p>
-                                            <div className="flex items-center justify-center gap-1 mt-1">
-                                                <div className="w-3 h-3 rounded-full bg-emerald-100 flex items-center justify-center text-[6px] font-bold text-emerald-700">
-                                                    {item.user.charAt(0)}
-                                                </div>
-                                                <p className="text-[9px] text-stone-400 truncate max-w-[60px]">{item.user}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    ))}
-                </div>
-            </div>
-
-        </div>
-      </div>
+      </Box>
 
       <style>{`
-        @keyframes infinite-scroll {
-            from { transform: translateX(0); }
-            to { transform: translateX(-100%); }
-        }
-        .animate-infinite-scroll-slow {
-            animation: infinite-scroll 25s linear infinite;
+        @keyframes pulse {
+          0% { transform: scale(0.95); opacity: 0.7; }
+          50% { transform: scale(1.05); opacity: 1; }
+          100% { transform: scale(0.95); opacity: 0.7; }
         }
       `}</style>
-    </div>
+    </Box>
   );
 };
