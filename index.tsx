@@ -1,9 +1,11 @@
+
 import React, { Component, ReactNode, ErrorInfo } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
 interface ErrorBoundaryProps {
-  children: ReactNode;
+  // Fix: changed children to optional to resolve 'missing children' error in JSX usage
+  children?: ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -11,9 +13,11 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+// Fix: Explicitly using React.Component to ensure props and state properties are correctly inherited and recognized by TypeScript
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
+    // Fix: Property 'state' is now recognized as inherited from React.Component
     this.state = { hasError: false, error: null };
   }
 
@@ -26,6 +30,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   render() {
+    // Fix: Accessing state properties via this.state
     if (this.state.hasError) {
       return (
         <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'sans-serif' }}>
@@ -48,6 +53,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       );
     }
 
+    // Fix: Property 'props' is now correctly recognized, allowing access to children
     return this.props.children;
   }
 }
@@ -60,6 +66,7 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
+    {/* Fix: ErrorBoundary now correctly identifies the nested JSX as the 'children' prop */}
     <ErrorBoundary>
       <App />
     </ErrorBoundary>

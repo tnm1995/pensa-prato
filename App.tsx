@@ -29,6 +29,7 @@ import { TermsScreen } from './components/TermsScreen';
 import { PrivacyScreen } from './components/PrivacyScreen';
 
 const MAX_FREE_USES = 3;
+const SESSION_KEY = 'pp_session_state';
 
 const DEFAULT_CHECKOUT_PRO = "https://pay.hotmart.com/SEU_LINK_PRO_AQUI"; 
 const DEFAULT_CHECKOUT_PACK = "https://pay.hotmart.com/SEU_LINK_PACK_GENERICO"; 
@@ -100,6 +101,40 @@ function App() {
   const [loadingMode, setLoadingMode] = useState<'analyzing' | 'recipes'>('analyzing');
   const isInitialAuthCheck = useRef(true);
 
+  // --- PERSISTÊNCIA DE SESSÃO (F5) ---
+  useEffect(() => {
+    const savedState = sessionStorage.getItem(SESSION_KEY);
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        if (parsed.currentView) setCurrentView(parsed.currentView);
+        if (parsed.scanResult) setScanResult(parsed.scanResult);
+        if (parsed.recipes) setRecipes(parsed.recipes);
+        if (parsed.imagePreview) setImagePreview(parsed.imagePreview);
+        if (parsed.activeProfiles) setActiveProfiles(parsed.activeProfiles);
+        if (parsed.cookingMethod) setCookingMethod(parsed.cookingMethod);
+      } catch (e) {
+        console.error("Erro ao restaurar sessão:", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Não salvar estados de auth ou landing para evitar loops
+    const viewsToIgnore = [AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.COMPLETE_PROFILE];
+    if (!viewsToIgnore.includes(currentView)) {
+        const stateToSave = {
+            currentView,
+            scanResult,
+            recipes,
+            imagePreview, // Base64 sobrevive ao reload, URL.createObjectURL não
+            activeProfiles,
+            cookingMethod
+        };
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(stateToSave));
+    }
+  }, [currentView, scanResult, recipes, imagePreview, activeProfiles, cookingMethod]);
+
   const clearListeners = () => {
       unsubs.current.forEach(u => u());
       unsubs.current = [];
@@ -115,10 +150,8 @@ function App() {
     return () => clearTimeout(timer);
   }, [isAuthChecking, user, isDemoMode]);
 
-  // ESCUTA EM TEMPO REAL: Configurações Globais (Checkout e Landing)
   useEffect(() => {
     if (db) {
-        // Escutar Checkout
         const unsubCheckout = onSnapshot(doc(db, 'admin_settings', 'checkout'), (snap: any) => {
             const hasDoc = snap && (typeof snap.exists === 'function' ? snap.exists() : snap.exists);
             if (hasDoc) {
@@ -129,11 +162,8 @@ function App() {
                     packs: data.packs || {}
                 });
             }
-        }, (err: any) => {
-            if (err.code !== 'permission-denied') console.warn("Erro ao carregar checkout:", err);
         });
 
-        // Escutar Landing Page
         const unsubLanding = onSnapshot(doc(db, 'admin_settings', 'landing_page'), (snap: any) => {
             const hasDoc = snap && (typeof snap.exists === 'function' ? snap.exists() : snap.exists);
             if (hasDoc) {
@@ -142,8 +172,6 @@ function App() {
                     setCustomSocialProofs(data.socialProofs);
                 }
             }
-        }, (err: any) => {
-            if (err.code !== 'permission-denied') console.warn("Erro ao carregar landing page:", err);
         });
 
         return () => {
@@ -151,9 +179,8 @@ function App() {
             unsubLanding();
         };
     }
-  }, [user]); // Re-executa quando o usuário muda para lidar com permissões do Admin
+  }, [user]);
 
-  // FIREBASE AUTH + SYNC USUÁRIO
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
       clearListeners();
@@ -183,25 +210,27 @@ function App() {
                 setIsPro(proStatus);
 
                 setCurrentView((prev) => {
+                    // Se já estamos em uma view de conteúdo restaurada pelo sessionStorage, mantemos
+                    const isContentPrivileged = [AppView.RECIPES, AppView.RESULTS, AppView.ANALYZING, AppView.UPLOAD, AppView.EXPLORE, AppView.PROFILE, AppView.SHOPPING_LIST].includes(prev);
+                    if (isContentPrivileged) return prev;
+
                     if (prev === AppView.TERMS || prev === AppView.PRIVACY) return prev;
                     const isAuthFlow = [AppView.LANDING, AppView.LOGIN, AppView.REGISTER, AppView.FORGOT_PASSWORD, AppView.COMPLETE_PROFILE].includes(prev);
                     if (!hasDoc || !hasCpf) return AppView.COMPLETE_PROFILE;
                     if (isAuthFlow) return AppView.WELCOME;
                     return prev;
                 });
-             }, (err: any) => {
-                if (err.code !== 'permission-denied') console.warn("Erro no listener de usuário:", err);
              });
              unsubs.current.push(unsubUser);
 
-             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'family'), (snap: any) => setFamilyMembers(safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember))), (err) => {}));
-             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'favorites'), (s: any) => setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe))), (err) => {}));
-             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'history'), (s: any) => setCookedHistory(safeMapDocs(s, d => d.data() as Recipe)), (err) => {}));
-             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'shopping'), (s: any) => setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem))), (err) => {}));
+             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'family'), (snap: any) => setFamilyMembers(safeMapDocs(snap, d => ({ ...d.data(), id: d.id } as FamilyMember)))));
+             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'favorites'), (s: any) => setFavoriteRecipes(safeMapDocs(s, d => ({ ...d.data(), _firestoreId: d.id } as unknown as Recipe)))));
+             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'history'), (s: any) => setCookedHistory(safeMapDocs(s, d => d.data() as Recipe))));
+             unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'shopping'), (s: any) => setShoppingList(safeMapDocs(s, d => ({ ...d.data(), id: d.id } as ShoppingItem)))));
              unsubs.current.push(onSnapshot(doc(db, 'users', currentUser.uid, 'settings', 'pantry'), (s: any) => {
                  const data = typeof s.data === 'function' ? s.data() : s.data;
                  setPantryItems(data ? data.items || [] : []);
-             }, (err) => {}));
+             }));
           }
         } else {
           setUser(null);
@@ -231,6 +260,7 @@ function App() {
   const handleLogout = async () => {
       isLoggingOut.current = true;
       clearListeners();
+      sessionStorage.removeItem(SESSION_KEY);
       try {
           localStorage.removeItem('pp_demo_mode');
           setIsDemoMode(false);
@@ -286,7 +316,14 @@ function App() {
   const handleFileSelect = async (file: File) => {
     if (!user && !isDemoMode) return;
     if (!isPro && usageCount >= MAX_FREE_USES) { setPaywallContext({ type: 'general' }); setShowPaywall(true); return; }
-    setImagePreview(URL.createObjectURL(file));
+    
+    // Converter arquivo para Base64 para que sobreviva ao F5
+    const reader = new FileReader();
+    reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
     setLoadingMode('analyzing');
     setCurrentView(AppView.ANALYZING);
     try {
@@ -388,7 +425,7 @@ function App() {
       {currentView === AppView.PRIVACY && <PrivacyScreen onBack={() => setCurrentView(AppView.LANDING)} />}
 
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
-      {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => setCurrentView(AppView.UPLOAD)} />}
+      {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => { sessionStorage.removeItem(SESSION_KEY); setCurrentView(AppView.UPLOAD); }} />}
       {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(AppView.EXPLORE)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} cookingMethod={cookingMethod} />}
       {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(AppView.RECIPES)} isFavorite={favoriteRecipes.some(r => r.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={() => {}} shoppingList={shoppingList} onAddToShoppingList={() => {}} cookingMethod={cookingMethod} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
 
