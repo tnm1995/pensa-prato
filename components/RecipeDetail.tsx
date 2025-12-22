@@ -159,13 +159,17 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const normalizeString = (str: string) => 
     str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-  // Helper para extrair o nome sem a quantidade e unidade iniciais
+  /**
+   * Extração de Nome Limpo
+   * Garante que "100g de carne" não mantenha o "g" no nome se ele já foi capturado como quantidade.
+   */
   const extractCleanName = (ing: string) => {
-      // Remove a quantidade e a unidade (se houver) do início da string
-      let name = ing.replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:(gr|g|kg|ml|l|unid|un|colher|xícara|xic|chá|sopa)\b)?\s*/i, '').trim();
+      // 1. Remove apenas o número inicial e a unidade grudadinha (ex: 100g)
+      // Usamos uma regex que captura o número e opcionalmente a unidade
+      const clean = ing.replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:(gr|g|kg|ml|l|unid|un|colher|xícara|xic|chá|sopa)\b)?\s*/i, '').trim();
       
-      // Remove conectivos como "de", "da" se sobrarem no início
-      name = name.replace(/^(de|da|do|dos|das)\s+/i, '').trim();
+      // 2. Remove conectivos "de", "da", "do" do início
+      let name = clean.replace(/^(de|da|do|dos|das)\s+/i, '').trim();
       
       return name;
   };
@@ -183,19 +187,21 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   };
 
   const handleAddIngredientToList = (ing: string) => {
-    // Captura a quantidade e a unidade
+    // 1. Captura a parte de quantidade/unidade
     const qtyMatch = ing.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:(gr|g|kg|ml|l|unid|un|colher|xícara|xic|chá|sopa)\b)?/i);
     let quantity = "1";
     
     if (qtyMatch) {
         quantity = qtyMatch[0].trim();
-        // Se a quantidade capturada for apenas um número, adiciona o "x"
+        // Se for apenas número sem unidade, adicionamos um "x"
         if (/^\d+$/.test(quantity)) {
             quantity += "x";
         }
     }
     
+    // 2. Extrai o nome limpando a parte de quantidade que já pegamos
     const nameOnly = extractCleanName(ing);
+                       
     onAddToShoppingList(nameOnly || ing, quantity);
   };
 
