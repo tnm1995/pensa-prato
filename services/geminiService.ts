@@ -1,37 +1,10 @@
 
-
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold, GenerateContentResponse } from "@google/genai";
 import { ScanResult, Recipe, FamilyMember, CookingMethod } from "../types";
 import { seasonalRecipesData } from "../data/staticRecipes";
 
-// Helper to safely get env vars without crashing if process is undefined
-const getSafeEnv = (key: string): string | undefined => {
-  try {
-    // Check standard Node/Next.js/CRA process.env
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env[key] || process.env[`NEXT_PUBLIC_${key}`] || process.env[`REACT_APP_${key}`];
-    }
-    // Fallback for Vite (unlikely in this setup but good for safety)
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-      // @ts-ignore
-      return import.meta.env[`VITE_${key}`] || import.meta.env[key];
-    }
-    // Fallback to window object if manually injected
-    // @ts-ignore
-    if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
-        // @ts-ignore
-        return window.ENV[key];
-    }
-  } catch (e) {
-    console.warn("Environment variable access failed:", e);
-  }
-  return undefined;
-};
-
-// Initialize the client with the environment API Key safely
-const apiKey = getSafeEnv('API_KEY');
-const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key-to-prevent-init-crash' });
+// Fix: Always use process.env.API_KEY directly for initialization as per coding guidelines.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
  * Converts a File object to a Base64 string suitable for the API.
@@ -130,19 +103,18 @@ export const getMockRecipes = (): Recipe[] => ([
 
 /**
  * Analyzes the fridge image using Plain Text Output to allow robust parsing.
- * This avoids the "Unterminated string" JSON errors caused by long AI descriptions.
  */
 export const analyzeFridgeImage = async (file: File): Promise<ScanResult> => {
-  if (!apiKey) {
-    console.warn("API Key not found. Falling back to Mock Data for demonstration.");
+  if (!process.env.API_KEY) {
+    console.warn("API Key not found in environment. Falling back to Mock Data.");
     return new Promise(resolve => setTimeout(() => resolve(getMockScanResult()), 1500));
   }
 
   const base64Data = await fileToGenerativePart(file);
   const mimeType = file.type || 'image/jpeg';
-  const model = "gemini-2.5-flash"; 
+  // Fix: Use gemini-3-flash-preview as the default multimodal model for analysis.
+  const model = "gemini-3-flash-preview"; 
   
-  // Prompt asking for a simple list, easier to parse than complex JSON
   const prompt = `
   Analise esta imagem de geladeira/despensa.
   Liste os alimentos identificados.
@@ -171,7 +143,6 @@ export const analyzeFridgeImage = async (file: File): Promise<ScanResult> => {
       config: {
         temperature: 0.1,
         maxOutputTokens: 1000,
-        // Removed responseMimeType: "application/json" to get plain text
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
           { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -181,30 +152,26 @@ export const analyzeFridgeImage = async (file: File): Promise<ScanResult> => {
       }
     });
 
+    // Fix: Accessing response.text directly (it is a property, not a method).
     const text = response.text;
     if (!text) throw new Error("A IA não retornou texto.");
 
-    // Robust Line-by-Line Parsing
     const lines = text.split('\n');
     const ingredients = lines
         .map(line => line.trim())
         .filter(line => (line.startsWith('-') || line.startsWith('*')) && line.length > 2)
         .map(line => {
-            // Remove bullet point and extra spaces
             let name = line.replace(/^[-*]\s*/, '').trim();
-            // Remove trailing punctuation
             name = name.replace(/[.,;]$/, '');
-            // Basic cleanup of common hallucinated prefixes
             name = name.replace(/^(pote de|garrafa de|caixa de|saco de)\s*/i, '');
             return {
                 name: name.toLowerCase(),
-                confidence: 0.9 // Default confidence for text lists
+                confidence: 0.9
             };
         })
-        .filter(item => item.name.length > 1 && item.name.length < 40); // Filter out garbage
+        .filter(item => item.name.length > 1 && item.name.length < 40);
 
     if (ingredients.length === 0) {
-        // Fallback if AI didn't use list format but wrote a sentence
         if (text.length < 200) {
              return { ingredients: [{ name: text, confidence: 0.5 }], notes: "Texto livre detectado." };
         }
@@ -215,11 +182,9 @@ export const analyzeFridgeImage = async (file: File): Promise<ScanResult> => {
 
   } catch (error: any) {
     console.error("Error analyzing image:", error);
-    
     if (error.message?.includes("403") || error.message?.includes("API key")) {
        return getMockScanResult();
     }
-
     throw new Error("Falha ao analisar a imagem. Tente novamente.");
   }
 };
@@ -258,11 +223,12 @@ const postProcessRecipes = (recipes: Recipe[], dislikes: string[]): Recipe[] => 
  * Generates recipe suggestions based on ingredients.
  */
 export const generateRecipes = async (ingredients: string[], activeProfiles?: FamilyMember[], cookingMethod?: CookingMethod, pantryItems?: string[]): Promise<Recipe[]> => {
-  if (!apiKey) {
+  if (!process.env.API_KEY) {
     return new Promise(resolve => setTimeout(() => resolve(getMockRecipes()), 1500));
   }
   
-  const model = "gemini-2.5-flash";
+  // Fix: Use gemini-3-flash-preview as the standard model for basic text/multimodal tasks.
+  const model = "gemini-3-flash-preview";
 
   const stapleIngredients = (pantryItems && pantryItems.length > 0) 
     ? pantryItems.join(', ') 
@@ -356,7 +322,7 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
       contents: "Sugira 4 receitas detalhadas passo-a-passo como se estivesse ensinando alguém que nunca cozinhou.",
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.4, // Lower temperature to prioritize realistic/proven recipes
+        temperature: 0.4,
         responseMimeType: "application/json",
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -381,17 +347,13 @@ export const generateRecipes = async (ingredients: string[], activeProfiles?: Fa
  * Generates recipes based on a CATEGORY/THEME (no fridge scanning required).
  */
 export const generateRecipesByCategory = async (category: string, activeProfiles?: FamilyMember[], cookingMethod?: CookingMethod): Promise<Recipe[]> => {
-    // 1. Check for Static "Database" Recipes first (Curated High Quality)
     const normalizedCategory = Object.keys(seasonalRecipesData).find(
       key => category.toLowerCase().includes(key.toLowerCase())
     );
 
     if (normalizedCategory) {
-      // Return static data with a slight delay to simulate "fetching"
       await new Promise(resolve => setTimeout(resolve, 800));
       let staticRecipes = [...seasonalRecipesData[normalizedCategory]];
-      
-      // Filter static recipes by profile dislikes (if any)
       if (activeProfiles && activeProfiles.length > 0) {
         const rawDislikes = activeProfiles.map(p => p.dislikes).filter(d => d && d.trim().length > 0).join(',');
         const dislikeList = rawDislikes.split(',').map(s => s.trim()).filter(s => s);
@@ -402,12 +364,12 @@ export const generateRecipesByCategory = async (category: string, activeProfiles
       return staticRecipes;
     }
 
-    // 2. Fallback to Gemini AI for other categories
-    if (!apiKey) {
+    if (!process.env.API_KEY) {
       return new Promise(resolve => setTimeout(() => resolve(getMockRecipes()), 1500));
     }
     
-    const model = "gemini-2.5-flash";
+    // Fix: Use gemini-3-flash-preview.
+    const model = "gemini-3-flash-preview";
   
     let profileContext = "";
     let restrictionRules = "";
@@ -453,7 +415,7 @@ export const generateRecipesByCategory = async (category: string, activeProfiles
   
     REGRAS DE DIDÁTICA (IMPORTANTE):
     1. EXPLIQUE CADA PASSO: Assuma que o usuário nunca cozinhou antes. Explique termos como "untar", "banho-maria" ou "ponto de bico".
-    2. DETALHES VISUAIS: "Bata até dobrar de volume e ficar esbranquiçado".
+    2. DETALHE VISUAIS: "Bata até dobrar de volume e ficar esbranquiçado".
     3. QUANTIDADES NO TEXTO (MUITO IMPORTANTE): Sempre repita a quantidade do ingrediente no passo a passo. 
        -> "Misture o item A" (ERRADO). 
        -> "Misture as **2 xícaras de item A**" (CORRETO).
@@ -483,7 +445,7 @@ export const generateRecipesByCategory = async (category: string, activeProfiles
         contents: `Quero 5 receitas incríveis e explicadas passo-a-passo para o tema: ${category}`,
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.5, // Balanced creativity and precision
+          temperature: 0.5,
           responseMimeType: "application/json",
           safetySettings: [
             { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -505,9 +467,10 @@ export const generateRecipesByCategory = async (category: string, activeProfiles
   };
 
 /**
- * Shared helper to process Gemini JSON response
+ * Shared helper to process Gemini JSON response.
  */
-const processGeminiResponse = (response: any, activeProfiles?: FamilyMember[], dislikeList: string[] = []): Recipe[] => {
+const processGeminiResponse = (response: GenerateContentResponse, activeProfiles?: FamilyMember[], dislikeList: string[] = []): Recipe[] => {
+    // Fix: Access response.text property directly.
     const text = response.text;
     if (!text) throw new Error("A IA não retornou texto.");
 

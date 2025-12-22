@@ -101,7 +101,6 @@ function App() {
       packs: {}
   });
 
-  const [customSocialProofs, setCustomSocialProofs] = useState<SocialProof[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(() => {
     try { return localStorage.getItem('pp_demo_mode') === 'true'; } catch { return false; }
@@ -332,7 +331,7 @@ function App() {
       <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
       <SubscriptionModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} onSubscribe={handleSubscribe} onBuyPack={() => {}} context={paywallContext} checkoutUrlProMonthly={checkoutConfig.proMonthlyUrl} checkoutUrlProAnnual={checkoutConfig.proAnnualUrl} checkoutUrlPack={DEFAULT_CHECKOUT_PACK} />
 
-      {currentView === AppView.LANDING && <LandingPage onLogin={() => setCurrentView(AppView.LOGIN)} onStartTest={() => setCurrentView(AppView.REGISTER)} onTermsClick={() => setCurrentView(AppView.TERMS)} onPrivacyClick={() => setCurrentView(AppView.PRIVACY)} customSocialProofs={customSocialProofs} />}
+      {currentView === AppView.LANDING && <LandingPage onLogin={() => setCurrentView(AppView.LOGIN)} onStartTest={() => setCurrentView(AppView.REGISTER)} onTermsClick={() => setCurrentView(AppView.TERMS)} onPrivacyClick={() => setCurrentView(AppView.PRIVACY)} />}
       {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => {}} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
       {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={() => setCurrentView(AppView.LOGIN)} />}
       {currentView === AppView.FORGOT_PASSWORD && <ForgotPasswordScreen onBack={() => setCurrentView(AppView.LOGIN)} />}

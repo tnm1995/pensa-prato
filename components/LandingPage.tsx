@@ -10,15 +10,13 @@ interface LandingPageProps {
   onLogin: () => void;
   onTermsClick?: () => void;
   onPrivacyClick?: () => void;
-  customSocialProofs?: SocialProof[];
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ 
     onStartTest, 
     onLogin, 
     onTermsClick, 
-    onPrivacyClick,
-    customSocialProofs
+    onPrivacyClick
 }) => {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,40 +40,44 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   };
 
-  const defaultSocialProofs: SocialProof[] = [
+  const socialProofs: SocialProof[] = [
     {
-        img: "https://images.unsplash.com/photo-1626202167732-2d1ec7ab7445?q=80&w=800&auto=format&fit=crop",
-        title: "Escondidinho de Carne Seca",
-        user: "Fernanda Lima",
-        avatar: "https://ui-avatars.com/api/?name=Fernanda+Lima&background=random"
+        img: "https://static.ndmais.com.br/2024/12/istock-1036815628-800x533.jpg",
+        title: "Assados no Forno",
+        user: "Ana Silva",
+        avatar: "https://ui-avatars.com/api/?name=Ana+Silva&background=random"
     },
     {
-        img: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?q=80&w=800&auto=format&fit=crop",
-        title: "Moqueca Tropical",
-        user: "Thiago Souza",
-        avatar: "https://ui-avatars.com/api/?name=Thiago+Souza&background=random"
+        img: "https://static.ndmais.com.br/2024/12/istock-1472680285-800x533.jpg",
+        title: "Saudável",
+        user: "Marcos Oliveira",
+        avatar: "https://ui-avatars.com/api/?name=Marcos+Oliveira&background=random"
     },
     {
-        img: "https://images.unsplash.com/photo-1626804475315-9988a034222c?q=80&w=800&auto=format&fit=crop",
-        title: "Arroz de Forno Cremoso",
-        user: "Carla Dias",
-        avatar: "https://ui-avatars.com/api/?name=Carla+Dias&background=random"
+        img: "https://cdn.aquelareceita.com.br/recipes/Salada-de-Macarrao.00_03_07_11.Still001-1641924703900.png",
+        title: "Ceia de Natal",
+        user: "Julia Costa",
+        avatar: "https://ui-avatars.com/api/?name=Julia+Costa&background=random"
     },
     {
-        img: "https://images.unsplash.com/photo-1604432299882-990a42428c03?q=80&w=800&auto=format&fit=crop",
-        title: "Picadinho com Purê",
-        user: "Rodrigo M.",
-        avatar: "https://ui-avatars.com/api/?name=Rodrigo+M&background=random"
+        img: "https://institucional.vapza.com.br/wp-content/uploads/2021/12/pratos-edited.jpg",
+        title: "Salada de Lentilha",
+        user: "Ricardo Santos",
+        avatar: "https://ui-avatars.com/api/?name=Ricardo+Santos&background=random"
     },
     {
-        img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=800&auto=format&fit=crop",
-        title: "Salada Colorida",
-        user: "Ana Julia",
-        avatar: "https://ui-avatars.com/api/?name=Ana+Julia&background=random"
+        img: "https://blog.vapza.com.br/wp-content/uploads/2020/10/Bruschetta-Vegetariana.jpg",
+        title: "Bruschetta Vegetariana",
+        user: "Bia Ferreira",
+        avatar: "https://ui-avatars.com/api/?name=Bia+Ferreira&background=random"
+    },
+    {
+        img: "https://blog.vapza.com.br/wp-content/uploads/2020/10/lasanha-de-carne-seca-e-molho-de-abobora.jpg",
+        title: "Lasanha de Carne-Seca",
+        user: "Carlos Mendes",
+        avatar: "https://ui-avatars.com/api/?name=Carlos+Mendes&background=random"
     }
   ];
-
-  const socialProofs = customSocialProofs && customSocialProofs.length > 0 ? customSocialProofs : defaultSocialProofs;
 
   const menuItems = [
       { label: 'Funcionalidades', id: 'features' },
@@ -543,7 +545,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* --- FAQ --- */}
-      <section id="faq" className="py-20 px-6 max-w-3xl mx-auto">
+      <section id="faq" className="py-20 px-6 max-3-xl mx-auto">
         <h2 className="text-3xl font-bold text-center mb-10 text-stone-900">Perguntas Frequentes</h2>
         <div className="space-y-4">
             {[

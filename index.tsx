@@ -4,7 +4,6 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 
 interface ErrorBoundaryProps {
-  // Fix: changed children to optional to resolve 'missing children' error in JSX usage
   children?: ReactNode;
 }
 
@@ -13,11 +12,11 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-// Fix: Explicitly using React.Component to ensure props and state properties are correctly inherited and recognized by TypeScript
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+// Fix: Extending the imported Component class directly to ensure state and props properties are correctly recognized by the TypeScript compiler.
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    // Fix: Property 'state' is now recognized as inherited from React.Component
+    // Fix: Initializing state property inherited from React.Component
     this.state = { hasError: false, error: null };
   }
 
@@ -30,7 +29,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   render() {
-    // Fix: Accessing state properties via this.state
+    // Fix: Correctly accessing inherited state property
     if (this.state.hasError) {
       return (
         <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'sans-serif' }}>
@@ -47,13 +46,14 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             color: '#374151',
             border: '1px solid #e5e7eb'
           }}>
+            {/* Fix: Accessing state.error for rendering error message */}
             {this.state.error?.message}
           </pre>
         </div>
       );
     }
 
-    // Fix: Property 'props' is now correctly recognized, allowing access to children
+    // Fix: Correctly accessing inherited props property for children
     return this.props.children;
   }
 }
@@ -66,7 +66,6 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    {/* Fix: ErrorBoundary now correctly identifies the nested JSX as the 'children' prop */}
     <ErrorBoundary>
       <App />
     </ErrorBoundary>

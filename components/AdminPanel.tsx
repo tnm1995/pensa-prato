@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { db, collection, doc, deleteDoc, updateDoc, setDoc, getDoc } from '../services/firebase';
-import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw, DollarSign, Link as LinkIcon, Save, Calendar, CheckCircle2, XCircle, Clock, Layout, Image as ImageIcon, Plus } from 'lucide-react';
-import { FamilyMember, SocialProof } from '../types';
+import { ArrowLeft, Users, Trash2, Search, Shield, Eye, Database, ChefHat, RefreshCw, DollarSign, Link as LinkIcon, Save, Calendar, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { FamilyMember } from '../types';
 
 interface AdminPanelProps {
   onBack: () => void;
@@ -29,7 +29,7 @@ const KNOWN_CATEGORIES = [
 ];
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail, showToast }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'monetization' | 'landing'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'monetization'>('users');
   
   // User Management State
   const [users, setUsers] = useState<UserSummary[]>([]);
@@ -50,11 +50,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
   });
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
-
-  // Landing Page State
-  const [landingProofs, setLandingProofs] = useState<SocialProof[]>([]);
-  const [loadingLanding, setLoadingLanding] = useState(false);
-  const [savingLanding, setSavingLanding] = useState(false);
 
   // --- USERS LOGIC ---
   const fetchAllUsers = async () => {
@@ -256,68 +251,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
       }));
   };
 
-  // --- LANDING LOGIC ---
-  const fetchLanding = async () => {
-      setLoadingLanding(true);
-      try {
-          const docSnap = await getDoc(doc(db, 'admin_settings', 'landing_page'));
-          const exists = docSnap && (typeof docSnap.exists === 'function' ? docSnap.exists() : docSnap.exists);
-          if (exists) {
-              const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data;
-              setLandingProofs(data.socialProofs || []);
-          } else {
-              setLandingProofs([]);
-          }
-      } catch (e) {
-          console.error("Erro landing:", e);
-      } finally {
-          setLoadingLanding(false);
-      }
-  };
-
-  const handleSaveLanding = async () => {
-      setSavingLanding(true);
-      try {
-          // Garante que salvamos apenas os campos necessários na estrutura correta
-          const socialProofsToSave = landingProofs.map(p => ({
-              title: p.title || '',
-              user: p.user || '',
-              img: p.img || '',
-              avatar: p.avatar || `https://ui-avatars.com/api/?name=${(p.user || 'User').replace(' ', '+')}&background=random`
-          }));
-          
-          await setDoc(doc(db, 'admin_settings', 'landing_page'), { socialProofs: socialProofsToSave });
-          if (showToast) showToast("Conteúdo da Landing Page atualizado!", "success");
-      } catch (e) {
-          console.error(e);
-          if (showToast) showToast("Erro ao salvar Landing Page.", "error");
-      } finally {
-          setSavingLanding(false);
-      }
-  };
-
-  const updateProof = (idx: number, field: keyof SocialProof, val: string) => {
-      const newList = [...landingProofs];
-      newList[idx] = { ...newList[idx], [field]: val };
-      setLandingProofs(newList);
-  };
-
-  const removeProof = (idx: number) => {
-      setLandingProofs(landingProofs.filter((_, i) => i !== idx));
-  };
-
-  const addProof = () => {
-      setLandingProofs([...landingProofs, { 
-          title: 'Novo Prato', 
-          user: 'Nome do Usuário', 
-          img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format&fit=crop' 
-      }]);
-  };
-
   useEffect(() => {
     if (activeTab === 'users') fetchAllUsers();
     if (activeTab === 'monetization') fetchConfig();
-    if (activeTab === 'landing') fetchLanding();
   }, [activeTab]);
 
   const filteredUsers = users.filter(u => 
@@ -385,12 +321,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                 className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'users' ? 'bg-white text-emerald-600 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'}`}
             >
                 <Users className="w-4 h-4" /> Usuários
-            </button>
-            <button 
-                onClick={() => setActiveTab('landing')}
-                className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'landing' ? 'bg-white text-emerald-600 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'}`}
-            >
-                <Layout className="w-4 h-4" /> Landing Page
             </button>
             <button 
                 onClick={() => setActiveTab('monetization')}
@@ -516,92 +446,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack, currentUserEmail
                     </div>
                 </div>
             </>
-        )}
-
-        {activeTab === 'landing' && (
-            <div className="animate-in fade-in slide-in-from-bottom-2">
-                 <div className="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 className="text-xl font-bold text-gray-800">Conteúdo da Landing Page</h3>
-                        <p className="text-sm text-gray-500">Gerencie as imagens e depoimentos da comunidade.</p>
-                    </div>
-                    <div className="flex gap-3">
-                         <button 
-                            onClick={addProof}
-                            className="bg-stone-100 text-stone-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-stone-200 transition-colors"
-                        >
-                            <Plus className="w-5 h-5" /> Adicionar
-                        </button>
-                        <button 
-                            onClick={handleSaveLanding}
-                            disabled={savingLanding}
-                            className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:bg-emerald-700 transition-colors disabled:opacity-70"
-                        >
-                            {savingLanding ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                            Salvar Landing
-                        </button>
-                    </div>
-                </div>
-
-                {loadingLanding ? (
-                    <div className="text-center py-20 text-gray-400">Carregando depoimentos...</div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {landingProofs.length === 0 && (
-                            <div className="col-span-full py-12 bg-white rounded-3xl border border-dashed border-gray-300 text-center text-gray-400">
-                                Clique em Adicionar para começar a configurar os depoimentos dinâmicos.
-                            </div>
-                        )}
-                        {landingProofs.map((proof, idx) => (
-                            <div key={idx} className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-200 relative group overflow-hidden transition-all hover:shadow-md">
-                                <div className="flex gap-4">
-                                    <div className="w-24 h-24 rounded-2xl bg-gray-100 overflow-hidden shrink-0 border border-gray-100">
-                                        <img src={proof.img} className="w-full h-full object-cover" alt="Preview" />
-                                    </div>
-                                    <div className="flex-1 space-y-3">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Título da Receita</label>
-                                            <input 
-                                                type="text" 
-                                                value={proof.title}
-                                                onChange={e => updateProof(idx, 'title', e.target.value)}
-                                                className="w-full p-2 bg-gray-50 border border-transparent focus:bg-white focus:border-emerald-200 rounded-lg text-sm outline-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nome do Usuário</label>
-                                            <input 
-                                                type="text" 
-                                                value={proof.user}
-                                                onChange={e => updateProof(idx, 'user', e.target.value)}
-                                                className="w-full p-2 bg-gray-50 border border-transparent focus:bg-white focus:border-emerald-200 rounded-lg text-sm outline-none"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="mt-4">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 flex items-center gap-1">
-                                        <ImageIcon className="w-3 h-3" /> URL da Imagem
-                                    </label>
-                                    <input 
-                                        type="text" 
-                                        value={proof.img}
-                                        onChange={e => updateProof(idx, 'img', e.target.value)}
-                                        placeholder="https://images.unsplash.com/..."
-                                        className="w-full p-2 bg-gray-50 border border-transparent focus:bg-white focus:border-emerald-200 rounded-lg text-xs outline-none font-mono"
-                                    />
-                                </div>
-                                <button 
-                                    onClick={() => removeProof(idx)}
-                                    className="absolute top-4 right-4 p-1.5 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
         )}
 
         {activeTab === 'monetization' && (
