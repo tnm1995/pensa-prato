@@ -78,6 +78,9 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
 
+  // Track from where the recipe detail was opened to fix the back button issue
+  const [recipeOriginView, setRecipeOriginView] = useState<AppView>(AppView.RECIPES);
+
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
       setToast({ message, type });
       setTimeout(() => setToast(null), 3000);
@@ -265,7 +268,7 @@ function App() {
       
       {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={(n, q) => handleAddItem(n, q)} onToggleItem={(id) => handleToggleItem(id)} onRemoveItem={(id) => handleRemoveItem(id)} onEditItem={(id, n, q) => handleEditItem(id, n, q)} onClearList={() => handleClearList()} onBack={() => setCurrentView(AppView.UPLOAD)} />}
       
-      {currentView === AppView.FAVORITES && <RecipeList recipes={favoriteRecipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={(r) => handleToggleFavorite(r)} isExplore={true} />}
+      {currentView === AppView.FAVORITES && <RecipeList recipes={favoriteRecipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setRecipeOriginView(AppView.FAVORITES); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={(r) => handleToggleFavorite(r)} isExplore={true} />}
 
       {currentView === AppView.PROFILE && <ProfileScreen userProfile={familyMembers.find(f => f.id === 'primary') || familyMembers[0]} wasteStats={wasteStats} pantry={pantryItems} onUpdatePantry={(items) => updateDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items })} onSaveProfile={() => {}} onBack={() => setCurrentView(AppView.UPLOAD)} onLogout={() => handleLogout()} isAdmin={isAdmin} onAdminClick={() => setCurrentView(AppView.ADMIN_PANEL)} />}
 
@@ -273,8 +276,8 @@ function App() {
       
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
       {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={(ings) => handleFindRecipes(ings)} onRetake={() => setCurrentView(AppView.UPLOAD)} />}
-      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={(r) => handleToggleFavorite(r)} />}
-      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(AppView.RECIPES)} isFavorite={favoriteRecipes.some(f => f.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={() => {}} shoppingList={shoppingList} onAddToShoppingList={(n, q) => handleAddItem(n, q)} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
+      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setRecipeOriginView(AppView.RECIPES); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={(r) => handleToggleFavorite(r)} />}
+      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(recipeOriginView)} isFavorite={favoriteRecipes.some(f => f.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={() => {}} shoppingList={shoppingList} onAddToShoppingList={(n, q) => handleAddItem(n, q)} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
 
       {showBottomMenu && <BottomMenu currentView={currentView} onNavigate={(v) => setCurrentView(v)} />}
     </div>
