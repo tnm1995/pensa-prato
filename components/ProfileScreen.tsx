@@ -90,9 +90,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
           </div>
           <h2 className="text-2xl font-extrabold text-stone-900">{name}</h2>
-          <div className="flex items-center gap-1.5 mt-1 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-widest">Premium Ativo</span>
+          
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-widest">Premium Ativo</span>
+            </div>
+            {isAdmin && (
+                <div className="bg-stone-900 px-3 py-1 rounded-full border border-stone-800 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    <span className="text-[10px] text-white font-black uppercase tracking-widest">Admin</span>
+                </div>
+            )}
           </div>
         </div>
 
@@ -123,6 +132,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       <div className="px-6 mt-10 space-y-10">
         
+        {/* --- ADMIN QUICK ACCESS --- */}
+        {isAdmin && (
+            <button 
+                onClick={onAdminClick}
+                className="w-full p-6 bg-stone-900 text-white rounded-[2.5rem] flex items-center justify-between group hover:bg-black transition-all shadow-2xl shadow-stone-200 animate-in slide-in-from-top-4"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/10 rounded-2xl group-hover:scale-110 transition-transform">
+                        <LayoutDashboard className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <div className="text-left">
+                        <p className="text-sm font-bold">Painel de Controle</p>
+                        <p className="text-[10px] text-stone-400 font-bold uppercase">Gerenciar Usuários & Vendas</p>
+                    </div>
+                </div>
+                <div className="p-2 bg-white/5 rounded-full">
+                    <ChevronRight className="w-5 h-5 text-stone-500" />
+                </div>
+            </button>
+        )}
+
         {/* --- CONQUISTAS (BADGES) --- */}
         <div>
             <div className="flex items-center justify-between mb-6">
@@ -242,15 +272,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
         {/* --- AÇÕES --- */}
         <div className="pt-4 space-y-4">
-            {isAdmin && (
-                <button 
-                    onClick={onAdminClick}
-                    className="w-full py-5 bg-stone-900 text-white rounded-[2rem] font-bold text-sm flex items-center justify-center gap-3 hover:bg-black transition-all active:scale-95 shadow-xl shadow-stone-200"
-                >
-                    <LayoutDashboard className="w-5 h-5 text-emerald-400" /> Painel Administrativo
-                </button>
-            )}
-
             <button onClick={onLogout} className="w-full py-5 bg-white border border-stone-200 text-stone-500 rounded-[2rem] font-bold text-sm flex items-center justify-center gap-3 hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all active:scale-95">
                 <LogOut className="w-5 h-5" /> Sair da Conta
             </button>

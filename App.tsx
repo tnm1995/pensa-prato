@@ -97,6 +97,7 @@ function App() {
            unsubs.current.push(onSnapshot(userDocRef, (docSnap: any) => {
               if (docSnap && docSnap.exists) {
                   const data = docSnap.data();
+                  // Atualização rigorosa da permissão administrativa
                   setIsAdmin(data?.isAdmin === true);
                   setIsPro(data?.isPro === true);
                   setWasteStats({
@@ -118,6 +119,7 @@ function App() {
         }
       } else {
         setUser(null);
+        setIsAdmin(false); // Reset de segurança
       }
       setIsAuthChecking(false);
     });
