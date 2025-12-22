@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { Camera, Upload, Image as ImageIcon, ScanLine, Wind, Flame, ChefHat, UtensilsCrossed, ChevronDown, AlertCircle, ArrowLeft, Compass, Zap, Lock, MoreHorizontal, Star } from 'lucide-react';
 import { FamilyMember, CookingMethod } from '../types';
@@ -37,29 +38,34 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
 
   const inspirations = [
     {
-        img: "https://images.unsplash.com/photo-1626202167732-2d1ec7ab7445?q=80&w=800&auto=format&fit=crop",
-        title: "Escondidinho",
-        user: "Fernanda L."
+        img: "https://static.ndmais.com.br/2024/12/istock-1036815628-800x533.jpg",
+        title: "Assados no Forno",
+        user: "Ana Silva"
     },
     {
-        img: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?q=80&w=800&auto=format&fit=crop",
-        title: "Moqueca",
-        user: "Thiago S."
+        img: "https://static.ndmais.com.br/2024/12/istock-1472680285-800x533.jpg",
+        title: "Saudável",
+        user: "Marcos O."
     },
     {
-        img: "https://images.unsplash.com/photo-1626804475315-9988a034222c?q=80&w=800&auto=format&fit=crop",
-        title: "Arroz Cremoso",
-        user: "Carla D."
+        img: "https://cdn.aquelareceita.com.br/recipes/Salada-de-Macarrao.00_03_07_11.Still001-1641924703900.png",
+        title: "Ceia de Natal",
+        user: "Julia C."
     },
     {
-        img: "https://images.unsplash.com/photo-1604432299882-990a42428c03?q=80&w=800&auto=format&fit=crop",
-        title: "Picadinho",
-        user: "Rodrigo M."
+        img: "https://institucional.vapza.com.br/wp-content/uploads/2021/12/pratos-edited.jpg",
+        title: "Salada de Lentilha",
+        user: "Ricardo S."
     },
     {
-        img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=800&auto=format&fit=crop",
-        title: "Salada Colorida",
-        user: "Ana J."
+        img: "https://blog.vapza.com.br/wp-content/uploads/2020/10/Bruschetta-Vegetariana.jpg",
+        title: "Bruschetta Veg.",
+        user: "Bia F."
+    },
+    {
+        img: "https://blog.vapza.com.br/wp-content/uploads/2020/10/lasanha-de-carne-seca-e-molho-de-abobora.jpg",
+        title: "Lasanha Carne-Seca",
+        user: "Carlos M."
     }
   ];
 
@@ -278,7 +284,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
             <div className="mt-8 mb-4">
                 <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest text-center mb-4 flex items-center justify-center gap-2 opacity-80">
                     <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-                    Feito pela comunidade hoje
+                    Feito pela comunidade
                     <span className="w-1 h-1 rounded-full bg-stone-300"></span>
                 </p>
                 
