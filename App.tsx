@@ -309,7 +309,9 @@ function App() {
       
       {currentView === AppView.FAVORITES && <RecipeList recipes={favoriteRecipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} isExplore={true} />}
 
-      {currentView === AppView.PROFILE && <ProfileScreen userProfile={familyMembers.find(f => f.id === 'primary') || familyMembers[0]} wasteStats={wasteStats} pantry={pantryItems} onUpdatePantry={(items) => updateDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items })} onSaveProfile={() => {}} onBack={() => setCurrentView(AppView.UPLOAD)} onLogout={handleLogout} isAdmin={isAdmin} />}
+      {currentView === AppView.PROFILE && <ProfileScreen userProfile={familyMembers.find(f => f.id === 'primary') || familyMembers[0]} wasteStats={wasteStats} pantry={pantryItems} onUpdatePantry={(items) => updateDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items })} onSaveProfile={() => {}} onBack={() => setCurrentView(AppView.UPLOAD)} onLogout={handleLogout} isAdmin={isAdmin} onAdminClick={() => setCurrentView(AppView.ADMIN_PANEL)} />}
+
+      {currentView === AppView.ADMIN_PANEL && <AdminPanel onBack={() => setCurrentView(AppView.PROFILE)} currentUserEmail={user?.email} showToast={showToast} />}
       
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
       {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => setCurrentView(AppView.UPLOAD)} />}

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, Coins, Leaf, Trophy, Lock, ShieldCheck, TrendingUp, ShoppingBasket, Settings, Info } from 'lucide-react';
+import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, Coins, Leaf, Trophy, Lock, ShieldCheck, TrendingUp, ShoppingBasket, Settings, Info, LayoutDashboard } from 'lucide-react';
 import { Recipe, FamilyMember, WasteStats } from '../types';
 
 interface ProfileScreenProps {
@@ -12,6 +12,7 @@ interface ProfileScreenProps {
   onBack: () => void;
   onLogout: () => void;
   isAdmin?: boolean;
+  onAdminClick?: () => void;
 }
 
 const ALL_BADGES = [
@@ -28,7 +29,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onUpdatePantry,
     onBack, 
     onLogout,
-    isAdmin = false
+    isAdmin = false,
+    onAdminClick
 }) => {
   const { name = 'Usuário', avatar = '', restrictions = [], dislikes = '' } = userProfile || {};
   const [isEditingPantry, setIsEditingPantry] = useState(false);
@@ -240,6 +242,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
         {/* --- AÇÕES --- */}
         <div className="pt-4 space-y-4">
+            {isAdmin && (
+                <button 
+                    onClick={onAdminClick}
+                    className="w-full py-5 bg-stone-900 text-white rounded-[2rem] font-bold text-sm flex items-center justify-center gap-3 hover:bg-black transition-all active:scale-95 shadow-xl shadow-stone-200"
+                >
+                    <LayoutDashboard className="w-5 h-5 text-emerald-400" /> Painel Administrativo
+                </button>
+            )}
+
             <button onClick={onLogout} className="w-full py-5 bg-white border border-stone-200 text-stone-500 rounded-[2rem] font-bold text-sm flex items-center justify-center gap-3 hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all active:scale-95">
                 <LogOut className="w-5 h-5" /> Sair da Conta
             </button>
