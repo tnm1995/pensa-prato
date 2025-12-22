@@ -91,11 +91,17 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
   };
 
   const renderAvatar = (profile: FamilyMember) => {
-    const isImage = profile.avatar && (profile.avatar.startsWith('http') || profile.avatar.startsWith('data:'));
-    if (isImage && profile.avatar) {
+    const isImage = profile.avatar && (profile.avatar.startsWith('http') || profile.avatar.startsWith('data:image'));
+    
+    if (isImage) {
         return <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />;
     }
-    return <div className="w-full h-full flex items-center justify-center bg-white text-xs select-none">{profile.avatar || '👤'}</div>;
+    
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-white text-base select-none">
+        {profile.avatar || profile.name.charAt(0).toUpperCase()}
+      </div>
+    );
   };
 
   const remaining = Math.max(0, maxFreeUses - freeUsageCount);
@@ -149,7 +155,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
 
       <div className="flex-1 flex flex-col px-6 relative z-10 max-w-lg mx-auto w-full h-full">
         
-        {/* --- CONTEXT CARD (MUI Style Paper) --- */}
+        {/* --- CONTEXT CARD --- */}
         <motion.button 
             variants={itemVariants}
             onClick={onChangeContext}
@@ -198,7 +204,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
             <p className="text-stone-500 font-medium text-sm">Mostre os ingredientes e receba receitas da IA.</p>
         </motion.div>
 
-        {/* --- UPLOAD AREA (Interactive Card) --- */}
+        {/* --- UPLOAD AREA --- */}
         <motion.div
             variants={itemVariants}
             className={`relative cursor-pointer bg-white rounded-[3rem] shadow-xl transition-all duration-500 aspect-[4/5] flex flex-col items-center justify-center overflow-hidden border-2 ${
@@ -220,7 +226,6 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
                 onChange={handleFileChange}
             />
             
-            {/* Animated Glow Backdrop */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <div className="w-64 h-64 bg-emerald-100/50 rounded-full blur-[100px] animate-pulse"></div>
             </div>

@@ -40,6 +40,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setIsEditingPantry(false);
   };
 
+  const renderProfileAvatar = () => {
+    const isImage = avatar && (avatar.startsWith('http') || avatar.startsWith('data:image'));
+    
+    if (isImage) {
+      return (
+        <img 
+          src={avatar} 
+          alt={name} 
+          className="w-full h-full object-cover" 
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${name}&background=10b981&color=fff`;
+          }}
+        />
+      );
+    }
+
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-white text-5xl select-none">
+        {avatar || name.charAt(0).toUpperCase()}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#FDFCF8] pb-32 font-['Sora']">
       
@@ -58,7 +81,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <div className="flex flex-col items-center mb-8">
           <div className="relative">
               <div className="w-28 h-28 rounded-[2.5rem] bg-emerald-50 border-4 border-white shadow-2xl flex items-center justify-center mb-4 overflow-hidden rotate-3 hover:rotate-0 transition-transform duration-500">
-                <img src={avatar || `https://ui-avatars.com/api/?name=${name}&background=10b981&color=fff`} alt={name} className="w-full h-full object-cover" />
+                {renderProfileAvatar()}
               </div>
               <div className="absolute -bottom-1 -right-1 bg-amber-400 text-white p-2 rounded-xl shadow-lg border-2 border-white">
                   <Star className="w-4 h-4 fill-current" />
@@ -128,7 +151,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
         </div>
 
-        {/* --- MINHA DESPENSA (RESTAURADA) --- */}
+        {/* --- MINHA DESPENSA --- */}
         <div className="bg-white p-6 rounded-[2.5rem] border border-stone-100 shadow-sm">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-stone-800 uppercase tracking-widest flex items-center gap-2">
@@ -170,7 +193,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             )}
         </div>
 
-        {/* --- RESTRIÇÕES & GOSTOS (RESTAURADO) --- */}
+        {/* --- RESTRIÇÕES & GOSTOS --- */}
         <div className="bg-white p-6 rounded-[2.5rem] border border-stone-100 shadow-sm">
             <h3 className="text-sm font-bold text-stone-800 uppercase tracking-widest flex items-center gap-2 mb-6">
                 <AlertCircle className="w-5 h-5 text-red-500" /> Perfil Alimentar
