@@ -318,10 +318,26 @@ function App() {
       {currentView === AppView.LANDING && <LandingPage onLogin={() => navigateTo(AppView.LOGIN)} onStartTest={() => navigateTo(AppView.REGISTER)} />}
       {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => navigateTo(AppView.WELCOME)} onNavigateToRegister={() => navigateTo(AppView.REGISTER)} onNavigateToForgotPassword={() => navigateTo(AppView.FORGOT_PASSWORD)} />}
       {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => navigateTo(AppView.WELCOME)} onNavigateToLogin={() => navigateTo(AppView.LOGIN)} />}
-      {currentView === AppView.WELCOME && <WelcomeScreen onSelectAny={() => navigateTo(AppView.COOKING_METHOD)} onSelectFamily={() => navigateTo(AppView.FAMILY_SELECTION)} />}
+      
+      {currentView === AppView.WELCOME && (
+        <WelcomeScreen 
+          onSelectAny={() => {
+            setActiveProfiles([]); // Limpa perfis para o modo "Qualquer Pessoa"
+            navigateTo(AppView.COOKING_METHOD);
+          }} 
+          onSelectFamily={() => navigateTo(AppView.FAMILY_SELECTION)} 
+        />
+      )}
+      
       {currentView === AppView.FAMILY_SELECTION && <FamilySelectionScreen members={familyMembers} selectedMembers={activeProfiles} onToggleMember={(m) => setActiveProfiles(prev => prev.some(p => p.id === m.id) ? prev.filter(p => p.id !== m.id) : [...prev, m])} onSelectAll={() => setActiveProfiles(familyMembers)} onContinue={() => navigateTo(AppView.COOKING_METHOD)} onEditMember={(m) => { setEditingMember(m); navigateTo(AppView.PROFILE_EDITOR); }} onAddNew={() => { setEditingMember(null); navigateTo(AppView.PROFILE_EDITOR); }} onBack={() => navigateTo(AppView.WELCOME)} />}
       {currentView === AppView.PROFILE_EDITOR && <ProfileEditorScreen initialMember={editingMember || undefined} onSave={(m) => { handleSaveMember(m); }} onCancel={() => { setEditingMember(null); navigateTo(AppView.FAMILY_SELECTION); }} onDelete={(id) => { handleDeleteMember(id); }} />}
-      {currentView === AppView.COOKING_METHOD && <CookingMethodScreen onSelectMethod={(m) => { setCookingMethod(m); navigateTo(AppView.UPLOAD); }} onBack={() => navigateTo(AppView.FAMILY_SELECTION)} />}
+      
+      {currentView === AppView.COOKING_METHOD && (
+        <CookingMethodScreen 
+          onSelectMethod={(m) => { setCookingMethod(m); navigateTo(AppView.UPLOAD); }} 
+          onBack={() => navigateTo(activeProfiles.length > 0 ? AppView.FAMILY_SELECTION : AppView.WELCOME)} 
+        />
+      )}
       
       {currentView === AppView.UPLOAD && <UploadScreen onFileSelected={handleFileSelect} onProfileClick={() => navigateTo(AppView.PROFILE)} activeProfiles={activeProfiles} cookingMethod={cookingMethod} onChangeContext={() => navigateTo(AppView.WELCOME)} freeUsageCount={usageCount} maxFreeUses={MAX_FREE_USES} isPro={isPro} onBack={() => navigateTo(AppView.WELCOME)} onExploreClick={() => navigateTo(AppView.EXPLORE)} />}
       
