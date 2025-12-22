@@ -9,6 +9,7 @@ import {
   MessageCircle, 
   Pencil, 
   X,
+  MoreVertical
 } from 'lucide-react';
 import { ShoppingItem } from '../types';
 
@@ -34,6 +35,7 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
   const [newItemName, setNewItemName] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editQuantity, setEditQuantity] = useState('');
 
@@ -47,7 +49,6 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
   const handleAdd = () => {
     if (newItemName.trim()) {
       let formattedQuantity = newItemQuantity.trim();
-      // Se for apenas número, adiciona o "x"
       if (/^\d+$/.test(formattedQuantity)) {
           formattedQuantity = `${formattedQuantity}x`;
       }
@@ -59,6 +60,7 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
 
   const startEditing = (item: ShoppingItem) => {
     setEditingId(item.id);
+    setMenuOpenId(null);
     setEditName(item.name);
     setEditQuantity(item.quantity ? item.quantity : '');
   };
@@ -95,7 +97,6 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-32 flex flex-col font-['Sora']">
-      {/* HEADER LIMPO */}
       <div className="bg-white shadow-sm pt-6 px-6 pb-6 sticky top-0 z-40 border-b border-stone-200">
         <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-4">
@@ -129,7 +130,6 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
 
       <div className="flex-1 p-6 max-w-lg mx-auto w-full">
         
-        {/* INPUT DE ADICIONAR - MAIOR E MAIS CLARO */}
         <div className="flex gap-2 mb-10 items-stretch">
           <div className="flex-1 bg-white flex items-center pl-4 pr-2 rounded-[1.5rem] border-2 border-stone-200 shadow-sm focus-within:border-emerald-500 transition-all overflow-hidden">
             <input 
@@ -166,17 +166,17 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
         ) : (
           <div className="space-y-10">
             
-            {/* ITENS ATIVOS */}
             {activeItems.length > 0 && (
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-6 pl-1">Itens Pendentes ({activeItems.length})</h4>
                 {activeItems.map((item) => {
                   const isEditing = editingId === item.id;
+                  const isMenuOpen = menuOpenId === item.id;
                   
                   return (
                     <div 
                         key={item.id}
-                        className={`flex items-center bg-white p-4 rounded-[2rem] shadow-sm border-2 transition-all duration-300 ${isEditing ? 'border-emerald-500 scale-[1.02]' : 'border-stone-100 hover:border-stone-200'}`}
+                        className={`relative flex items-center bg-white p-3 px-4 rounded-[2rem] shadow-sm border-2 transition-all duration-300 ${isEditing ? 'border-emerald-500 scale-[1.02]' : 'border-stone-100 hover:border-stone-200'}`}
                     >
                         {isEditing ? (
                             <div className="flex-1 flex items-center gap-2">
@@ -192,7 +192,7 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
-                                    className="flex-1 p-3 bg-stone-50 rounded-xl outline-none font-bold text-stone-800 text-base"
+                                    className="flex-1 p-3 bg-stone-50 rounded-xl outline-none font-bold text-stone-800 text-sm"
                                 />
                                 <button onClick={saveEdit} className="p-3 bg-emerald-600 text-white rounded-xl shadow-md"><Check className="w-5 h-5 stroke-[3px]" /></button>
                                 <button onClick={() => setEditingId(null)} className="p-3 bg-stone-100 text-stone-400 rounded-xl"><X className="w-5 h-5" /></button>
@@ -201,33 +201,46 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
                             <>
                                 <button
                                     onClick={() => onToggleItem(item.id)}
-                                    className="w-8 h-8 rounded-full border-4 border-stone-100 hover:border-emerald-200 mr-4 flex items-center justify-center transition-all bg-white shadow-inner shrink-0 active:scale-90"
+                                    className="w-7 h-7 rounded-full border-4 border-stone-100 hover:border-emerald-200 mr-4 flex items-center justify-center transition-all bg-white shadow-inner shrink-0 active:scale-90"
                                 />
                                 
-                                <div className="flex-1 flex items-center gap-3 min-w-0 mr-4">
+                                <div className="flex-1 flex items-center gap-2.5 min-w-0 mr-2">
                                     {item.quantity && (
-                                        <span className="text-[11px] font-black uppercase px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 whitespace-nowrap">
+                                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 whitespace-nowrap">
                                             {item.quantity}
                                         </span>
                                     )}
-                                    <span className="font-extrabold text-stone-800 text-lg truncate capitalize tracking-tight">
+                                    <span className="font-extrabold text-stone-800 text-base truncate capitalize tracking-tight">
                                         {item.name}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center gap-1">
+                                <div className="relative">
                                     <button 
-                                        onClick={() => startEditing(item)}
-                                        className="text-stone-300 hover:text-stone-600 p-2.5 transition-all active:scale-90"
+                                        onClick={() => setMenuOpenId(isMenuOpen ? null : item.id)}
+                                        className={`p-2 rounded-xl transition-all ${isMenuOpen ? 'bg-stone-100 text-stone-900' : 'text-stone-300 hover:text-stone-500'}`}
                                     >
-                                        <Pencil className="w-5 h-5" />
+                                        <MoreVertical className="w-5 h-5" />
                                     </button>
-                                    <button 
-                                        onClick={() => onRemoveItem(item.id)}
-                                        className="text-stone-300 hover:text-rose-500 p-2.5 transition-all active:scale-90"
-                                    >
-                                        <Trash2 className="w-5 h-5" />
-                                    </button>
+
+                                    {isMenuOpen && (
+                                        <div className="absolute right-0 top-full mt-2 w-32 bg-white rounded-2xl shadow-xl border border-stone-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                            <button 
+                                                onClick={() => startEditing(item)}
+                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-stone-50 text-stone-600 transition-colors"
+                                            >
+                                                <Pencil className="w-4 h-4 text-emerald-500" />
+                                                <span className="text-xs font-bold">Editar</span>
+                                            </button>
+                                            <button 
+                                                onClick={() => { onRemoveItem(item.id); setMenuOpenId(null); }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-50 text-rose-600 transition-colors border-t border-stone-50"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                                <span className="text-xs font-bold">Excluir</span>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </>
                         )}
@@ -237,7 +250,6 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
               </div>
             )}
 
-            {/* ITENS CONCLUÍDOS - MAIS DISCRETOS */}
             {checkedItems.length > 0 && (
               <div className="pt-6 border-t border-stone-200 animate-in slide-in-from-bottom-4">
                 <h4 className="text-[10px] font-black text-stone-300 uppercase tracking-[0.3em] mb-4 pl-1">
@@ -276,6 +288,11 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
           </div>
         )}
       </div>
+      
+      {/* Clique fora para fechar o menu */}
+      {menuOpenId && (
+          <div className="fixed inset-0 z-40" onClick={() => setMenuOpenId(null)}></div>
+      )}
     </div>
   );
 };

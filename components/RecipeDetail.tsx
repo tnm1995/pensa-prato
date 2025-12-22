@@ -159,33 +159,15 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const normalizeString = (str: string) => 
     str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-  /**
-   * Extração Robusta para Lista de Compras
-   * Garante que "100g de carne" não vire "carne" ou "100 carne".
-   */
+  // Helper para extrair o nome sem a quantidade e unidade iniciais
   const extractCleanName = (ing: string) => {
-      // 1. Identifica a quantidade numérica/fração inicial
-      const numberMatch = ing.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*/);
-      if (!numberMatch) return ing.trim();
-
-      const numberPart = numberMatch[0];
-      let namePart = ing.substring(numberPart.length).trim();
-
-      // 2. Se o que sobrou começa com unidades de medida, mantemos a unidade no NOME para clareza
-      // Ex: "100g de carne" -> Quantidade: "100", Nome: "g de carne"
-      // Mas para o usuário é melhor: Quantidade: "100g", Nome: "Carne"
-      const unitMatch = namePart.match(/^(gr|g|kg|kg|ml|l|litro|litros|un|unid|unidades|colheres|colher|xícaras|xícara|xic|cl|copo|pote|lata|sachê|pacote|embalagem)\b/i);
+      // Remove a quantidade e a unidade (se houver) do início da string
+      let name = ing.replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:(gr|g|kg|ml|l|unid|un|colher|xícara|xic|chá|sopa)\b)?\s*/i, '').trim();
       
-      if (unitMatch) {
-          // Se achou unidade, não removemos ela do nome para não perder o sentido
-          // Apenas limpamos conectivos como "de" ou "da"
-          namePart = namePart.replace(/^(de|da|do|dos|das)\s+/i, '').trim();
-          return namePart;
-      }
-
-      // Se não tem unidade óbvia, apenas remove o número e conectivos
-      namePart = namePart.replace(/^(de|da|do|dos|das)\s+/i, '').trim();
-      return namePart;
+      // Remove conectivos como "de", "da" se sobrarem no início
+      name = name.replace(/^(de|da|do|dos|das)\s+/i, '').trim();
+      
+      return name;
   };
 
   const isInShoppingList = (ingredientName: string) => {
@@ -201,19 +183,19 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   };
 
   const handleAddIngredientToList = (ing: string) => {
-    // 1. Extrair quantidade bruta (incluindo unidade se estiver grudada)
-    const rawQtyMatch = ing.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(gr|g|kg|ml|l|unid|un|colher|xícara|xic)?/i);
+    // Captura a quantidade e a unidade
+    const qtyMatch = ing.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:(gr|g|kg|ml|l|unid|un|colher|xícara|xic|chá|sopa)\b)?/i);
     let quantity = "1";
     
-    if (rawQtyMatch) {
-        quantity = rawQtyMatch[0].trim();
-        // Se a quantidade for só um número (ex: "2"), adicionamos um "x" para padrão visual
-        if (/^\d+$/.test(quantity)) quantity += "x";
+    if (qtyMatch) {
+        quantity = qtyMatch[0].trim();
+        // Se a quantidade capturada for apenas um número, adiciona o "x"
+        if (/^\d+$/.test(quantity)) {
+            quantity += "x";
+        }
     }
     
-    // 2. Extrair nome limpo preservando o que importa
     const nameOnly = extractCleanName(ing);
-                       
     onAddToShoppingList(nameOnly || ing, quantity);
   };
 
