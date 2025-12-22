@@ -159,11 +159,15 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const normalizeString = (str: string) => 
     str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-  // Helper centralizado para extrair o nome do ingrediente ignorando quantidades e conectivos
+  // Helper centralizado e inteligente para extrair o nome do ingrediente
   const extractCleanName = (ing: string) => {
-      return ing
-          .replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:[a-zA-ZÀ-ÿ°º]+\s+)?(?:de\s+)?/i, '')
-          .trim();
+      // 1. Remove a quantidade numérica inicial
+      let name = ing.replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*/, '').trim();
+      
+      // 2. Remove o "de" ou "da" inicial se existir após o número
+      name = name.replace(/^(de|da|do|dos|das)\s+/i, '').trim();
+      
+      return name;
   };
 
   const isInShoppingList = (ingredientName: string) => {
@@ -179,7 +183,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   };
 
   const handleAddIngredientToList = (ing: string) => {
-    // Captura apenas o valor numérico/fração inicial (ex: "1", "1/2", "1 1/2", "0.5")
+    // Captura apenas o valor numérico/fração inicial
     const qtyMatch = ing.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)/);
     const quantity = qtyMatch ? qtyMatch[1] : "1";
     
