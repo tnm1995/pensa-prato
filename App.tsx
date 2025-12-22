@@ -175,7 +175,65 @@ function App() {
     }
   };
 
-  // Determine if BottomMenu should be shown
+  // Helper to parse complex culinary quantities (1 1/2, 125g, 0.5)
+  const parseQty = (qty: string): { val: number, unit: string } => {
+    if (!qty) return { val: 1, unit: 'x' };
+    const clean = qty.trim().replace(',', '.');
+    const unitMatch = clean.match(/[a-zA-ZÀ-ÿ]+/);
+    const unit = unitMatch ? unitMatch[0] : 'x';
+    let val = 0;
+    if (clean.includes(' ') && clean.includes('/')) {
+        const [w, f] = clean.split(/\s+/);
+        const [n, d] = f.split('/').map(Number);
+        val = Number(w) + (n / d);
+    } else if (clean.includes('/')) {
+        const [n, d] = clean.split('/').map(Number);
+        val = n / d;
+    } else {
+        val = parseFloat(clean) || 1;
+    }
+    return { val, unit };
+  };
+
+  const formatJoinedQty = (val: number, unit: string): string => {
+      if (Number.isInteger(val)) return `${val}${unit === 'x' ? 'x' : unit}`;
+      const whole = Math.floor(val);
+      const frac = val - whole;
+      let fStr = "";
+      if (Math.abs(frac - 0.5) < 0.1) fStr = "1/2";
+      else if (Math.abs(frac - 0.25) < 0.1) fStr = "1/4";
+      else if (Math.abs(frac - 0.75) < 0.1) fStr = "3/4";
+      else fStr = frac.toFixed(1);
+      
+      if (whole > 0) return `${whole} ${fStr}${unit === 'x' ? 'x' : unit}`;
+      return `${fStr}${unit === 'x' ? 'x' : unit}`;
+  };
+
+  const handleAddItem = async (name: string, quantity?: string) => {
+      const normalizedName = name.toLowerCase().trim();
+      const existingIdx = shoppingList.findIndex(i => i.name.toLowerCase().trim() === normalizedName && !i.checked);
+
+      let newList;
+      if (existingIdx > -1) {
+          const existing = shoppingList[existingIdx];
+          const old = parseQty(existing.quantity || "1x");
+          const added = parseQty(quantity || "1x");
+          const combinedVal = old.val + added.val;
+          const newQtyStr = formatJoinedQty(combinedVal, old.unit);
+
+          newList = [...shoppingList];
+          newList[existingIdx] = { ...existing, quantity: newQtyStr };
+          showToast(`Quantidade de ${name} atualizada na lista!`, "info");
+      } else {
+          const newItem: ShoppingItem = { id: Date.now().toString(), name, quantity, checked: false };
+          newList = [newItem, ...shoppingList];
+          showToast(`Adicionado: ${name}`, "success");
+      }
+
+      setShoppingList(newList);
+      if (user && db) await setDoc(doc(db, 'users', user.uid, 'settings', 'shoppingList'), { items: newList });
+  };
+
   const showBottomMenu = [
     AppView.UPLOAD,
     AppView.SHOPPING_LIST,
@@ -222,7 +280,6 @@ function App() {
     </div>
   );
 
-  // Re-inserindo helpers que podem ter sido removidos acidentalmente no diff
   async function handleSelectCategory(category: string) {
     setLoadingMode('recipes');
     setCurrentView(AppView.ANALYZING);
@@ -249,13 +306,6 @@ function App() {
             showToast("Adicionado aos favoritos!", "success");
         }
     } catch (e) { console.error(e); }
-  }
-
-  async function handleAddItem(name: string, quantity?: string) {
-      const newItem: ShoppingItem = { id: Date.now().toString(), name, quantity, checked: false };
-      const newList = [newItem, ...shoppingList];
-      setShoppingList(newList);
-      if (user && db) await setDoc(doc(db, 'users', user.uid, 'settings', 'shoppingList'), { items: newList });
   }
 
   async function handleToggleItem(id: string) {
