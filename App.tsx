@@ -29,6 +29,7 @@ import { TermsScreen } from './components/TermsScreen';
 import { PrivacyScreen } from './components/PrivacyScreen';
 
 const MAX_FREE_USES = 3;
+const XP_PER_LEVEL = 500;
 
 const compressImage = (file: File): Promise<string> => {
   return new Promise((resolve) => {
@@ -63,7 +64,15 @@ function App() {
   const [favoriteRecipes, setFavoriteRecipes] = useState<Recipe[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [pantryItems, setPantryItems] = useState<string[]>([]);
-  const [wasteStats, setWasteStats] = useState<WasteStats>({ kgSaved: 0, moneySaved: 0, recipesCompleted: 0, badges: [] });
+  const [wasteStats, setWasteStats] = useState<WasteStats>({ 
+    kgSaved: 0, 
+    moneySaved: 0, 
+    recipesCompleted: 0, 
+    badges: [],
+    xp: 0,
+    level: 1,
+    streak: 0
+  });
   const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING);
   const [activeProfiles, setActiveProfiles] = useState<FamilyMember[]>([]);
   const [cookingMethod, setCookingMethod] = useState<CookingMethod>(CookingMethod.ANY);
@@ -78,7 +87,6 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Track from where the recipe detail was opened to fix the back button issue
   const [recipeOriginView, setRecipeOriginView] = useState<AppView>(AppView.RECIPES);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -106,7 +114,11 @@ function App() {
                     kgSaved: data?.kgSaved || 0,
                     moneySaved: data?.moneySaved || 0,
                     recipesCompleted: data?.recipesCompleted || 0,
-                    badges: data?.badges || []
+                    badges: data?.badges || [],
+                    xp: data?.xp || 0,
+                    level: data?.level || 1,
+                    streak: data?.streak || 0,
+                    lastCookedDate: data?.lastCookedDate
                   });
               }
            }));
@@ -133,27 +145,59 @@ function App() {
     try {
         const kgAdded = 0.45; 
         const moneyAdded = 18.50; 
+        const xpAdded = 100 + (recipe.used_ingredients.length * 10);
+        
         const newTotalCompleted = wasteStats.recipesCompleted + 1;
         const newKg = wasteStats.kgSaved + kgAdded;
         const newMoney = wasteStats.moneySaved + moneyAdded;
+        const newXpTotal = (wasteStats.xp || 0) + xpAdded;
+        const newLevel = Math.floor(newXpTotal / XP_PER_LEVEL) + 1;
+
+        // Gerenciar Streak
+        let newStreak = wasteStats.streak || 0;
+        const today = new Date().toISOString().split('T')[0];
+        const lastDate = wasteStats.lastCookedDate;
+
+        if (!lastDate) {
+            newStreak = 1;
+        } else {
+            const last = new Date(lastDate);
+            const curr = new Date(today);
+            const diffTime = Math.abs(curr.getTime() - last.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) {
+                newStreak += 1;
+            } else if (diffDays > 1) {
+                newStreak = 1;
+            }
+        }
         
         const newBadges = [...wasteStats.badges];
         if (newTotalCompleted === 1 && !newBadges.includes('aprendiz')) newBadges.push('aprendiz');
         if (newTotalCompleted === 5 && !newBadges.includes('consciente')) newBadges.push('consciente');
+        if (newLevel > wasteStats.level) {
+            showToast(`🎉 UAU! Você subiu para o Nível ${newLevel}!`, "success");
+        }
 
         await updateDoc(doc(db, 'users', user.uid), {
             kgSaved: newKg,
             moneySaved: newMoney,
             recipesCompleted: newTotalCompleted,
-            badges: newBadges
+            badges: newBadges,
+            xp: newXpTotal,
+            level: newLevel,
+            streak: newStreak,
+            lastCookedDate: today
         });
 
         await addDoc(collection(db, 'users', user.uid, 'history'), {
             ...recipe,
-            cookedAt: new Date()
+            cookedAt: new Date(),
+            xpGained: xpAdded
         });
 
-        showToast("Impacto Zero Desperdício atualizado! 🌿", "success");
+        showToast(`+${xpAdded} XP! Sua cozinha está evoluindo 🚀`, "success");
     } catch (e) { console.error(e); }
   };
 
@@ -178,7 +222,6 @@ function App() {
     }
   };
 
-  // Helper to parse complex culinary quantities (1 1/2, 125g, 0.5)
   const parseQty = (qty: string): { val: number, unit: string } => {
     if (!qty) return { val: 1, unit: 'x' };
     const clean = qty.trim().replace(',', '.');

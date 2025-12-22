@@ -39,7 +39,11 @@ export interface WasteStats {
   kgSaved: number;
   moneySaved: number;
   recipesCompleted: number;
-  badges: string[]; // IDs das medalhas conquistadas
+  badges: string[];
+  xp: number;
+  level: number;
+  streak: number;
+  lastCookedDate?: string; // ISO string
 }
 
 export interface FamilyMember {

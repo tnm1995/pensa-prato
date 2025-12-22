@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, Coins, Leaf, Trophy, Lock, ShieldCheck, TrendingUp, ShoppingBasket, Settings, Info, LayoutDashboard, Crown } from 'lucide-react';
+import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, Coins, Leaf, Trophy, Lock, ShieldCheck, TrendingUp, ShoppingBasket, Settings, Info, LayoutDashboard, Crown, Zap, Flame } from 'lucide-react';
 import { Recipe, FamilyMember, WasteStats } from '../types';
+import { motion } from 'framer-motion';
 
 interface ProfileScreenProps {
   userProfile: FamilyMember;
@@ -15,12 +16,22 @@ interface ProfileScreenProps {
   onAdminClick?: () => void;
 }
 
+const XP_PER_LEVEL = 500;
+
 const ALL_BADGES = [
     { id: 'aprendiz', name: 'Aprendiz de Chef', icon: ChefHat, color: 'text-blue-500', bg: 'bg-blue-50', desc: 'Sua primeira receita com a IA' },
     { id: 'consciente', name: 'Chef Consciente', icon: Leaf, color: 'text-emerald-500', bg: 'bg-emerald-50', desc: '5 receitas salvando ingredientes' },
-    { id: 'airfryer_master', name: 'Mestre da AirFryer', icon: Utensils, color: 'text-orange-500', bg: 'bg-orange-50', desc: 'Receita perfeita na AirFryer' },
+    { id: 'airfryer_master', name: 'Mestre da AirFryer', icon: Utensils, color: 'text-orange-500', bg: 'bg-orange-100', desc: 'Receita perfeita na AirFryer' },
     { id: 'heroi', name: 'Herói da Cozinha', icon: Trophy, color: 'text-amber-500', bg: 'bg-amber-50', desc: '20 receitas concluídas' },
 ];
+
+const getLevelTitle = (level: number) => {
+    if (level < 3) return "Ajudante de Cozinha";
+    if (level < 7) return "Cozinheiro Amador";
+    if (level < 12) return "Sous Chef";
+    if (level < 20) return "Chef de Partie";
+    return "Chef Executivo";
+};
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
     userProfile, 
@@ -35,6 +46,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const { name = 'Usuário', avatar = '', restrictions = [], dislikes = '' } = userProfile || {};
   const [isEditingPantry, setIsEditingPantry] = useState(false);
   const [tempPantry, setTempPantry] = useState(pantry.join(', '));
+
+  const xpProgress = (wasteStats.xp % XP_PER_LEVEL) / XP_PER_LEVEL * 100;
+  const levelTitle = getLevelTitle(wasteStats.level || 1);
 
   const handleSavePantry = () => {
       const items = tempPantry.split(',').map(i => i.trim()).filter(i => i.length > 0);
@@ -63,15 +77,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <button onClick={onBack} className="p-3 -ml-2 bg-stone-50 hover:bg-stone-100 rounded-2xl transition-all">
             <ArrowLeft className="w-5 h-5 text-stone-600" />
           </button>
-          <h1 className="text-lg font-bold text-stone-800">Minha Cozinha</h1>
-          {isAdmin ? (
-              <div className="flex items-center gap-1.5 bg-stone-900 px-3 py-1.5 rounded-xl border border-stone-800">
+          
+          <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100 shadow-sm">
+              <Flame className="w-4 h-4 text-orange-500 fill-current" />
+              <span className="text-xs font-black text-orange-700">{wasteStats.streak || 0} Dias</span>
+          </div>
+
+          {isAdmin && (
+              <div className="flex items-center gap-1.5 bg-stone-900 px-3 py-1.5 rounded-xl">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   <span className="text-[10px] text-white font-black uppercase tracking-widest">Admin</span>
-              </div>
-          ) : (
-              <div className="p-3 bg-stone-50 rounded-2xl">
-                 <ShieldCheck className="w-5 h-5 text-stone-400" />
               </div>
           )}
         </div>
@@ -86,9 +101,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
           </div>
           <h2 className="text-2xl font-extrabold text-stone-900">{name}</h2>
-          <div className="flex items-center gap-1.5 mt-1 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-widest">Premium Ativo</span>
+          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-1">{levelTitle}</p>
+          
+          {/* XP Bar */}
+          <div className="w-full max-w-[200px] mt-4">
+              <div className="flex justify-between items-end mb-1.5 px-1">
+                  <span className="text-[10px] font-black text-emerald-600 uppercase">Nível {wasteStats.level}</span>
+                  <span className="text-[10px] font-bold text-stone-400">{wasteStats.xp % XP_PER_LEVEL} / {XP_PER_LEVEL} XP</span>
+              </div>
+              <div className="h-3 w-full bg-stone-100 rounded-full overflow-hidden p-0.5 border border-stone-200">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${xpProgress}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full"
+                  />
+              </div>
           </div>
         </div>
 
@@ -118,7 +146,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       <div className="px-6 mt-10 space-y-10">
         
-        {/* --- BOTÃO ADMIN (AGORA NO TOPO E BEM VISÍVEL) --- */}
         {isAdmin && (
             <button 
                 onClick={onAdminClick}
@@ -133,9 +160,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Acesso Administrativo</p>
                     </div>
                 </div>
-                <div className="p-2 bg-white/5 rounded-full group-hover:translate-x-1 transition-transform">
-                    <ChevronRight className="w-5 h-5 text-stone-500" />
-                </div>
+                <ChevronRight className="w-5 h-5 text-stone-500" />
             </button>
         )}
 
@@ -143,8 +168,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <div>
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-sm font-bold text-stone-800 uppercase tracking-widest flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-amber-500" /> Minhas Conquistas
+                    <Trophy className="w-5 h-5 text-amber-500" /> Conquistas
                 </h3>
+                <span className="text-[10px] font-black text-stone-400">{wasteStats.badges.length} / {ALL_BADGES.length}</span>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
                 {ALL_BADGES.map((badge) => {
@@ -183,12 +209,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             )}
         </div>
 
-        {/* --- AÇÕES --- */}
-        <div className="pt-4 space-y-4">
-            <button onClick={onLogout} className="w-full py-5 bg-white border border-stone-200 text-stone-500 rounded-[2rem] font-bold text-sm flex items-center justify-center gap-3 hover:bg-red-50 hover:text-red-600 transition-all">
-                <LogOut className="w-5 h-5" /> Sair da Conta
-            </button>
-        </div>
+        <button onClick={onLogout} className="w-full py-5 bg-white border border-stone-200 text-stone-500 rounded-[2rem] font-bold text-sm flex items-center justify-center gap-3 hover:bg-red-50 hover:text-red-600 transition-all">
+            <LogOut className="w-5 h-5" /> Sair da Conta
+        </button>
       </div>
     </div>
   );

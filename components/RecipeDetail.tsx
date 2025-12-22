@@ -20,7 +20,10 @@ import {
   SkipBack,
   SkipForward,
   Sparkles,
-  Trophy
+  Trophy,
+  Zap,
+  TrendingUp,
+  Leaf
 } from 'lucide-react';
 import { ImageWithFallback } from './ImageWithFallback';
 
@@ -159,18 +162,9 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const normalizeString = (str: string) => 
     str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-  /**
-   * Extração de Nome Limpo
-   * Garante que "100g de carne" não mantenha o "g" no nome se ele já foi capturado como quantidade.
-   */
   const extractCleanName = (ing: string) => {
-      // 1. Remove apenas o número inicial e a unidade grudadinha (ex: 100g)
-      // Usamos uma regex que captura o número e opcionalmente a unidade
-      const clean = ing.replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:(gr|g|kg|ml|l|unid|un|colher|xícara|xic|chá|sopa)\b)?\s*/i, '').trim();
-      
-      // 2. Remove conectivos "de", "da", "do" do início
-      let name = clean.replace(/^(de|da|do|dos|das)\s+/i, '').trim();
-      
+      let name = ing.replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:(gr|g|kg|ml|l|unid|un|colher|xícara|xic|chá|sopa)\b)?\s*/i, '').trim();
+      name = name.replace(/^(de|da|do|dos|das)\s+/i, '').trim();
       return name;
   };
 
@@ -187,21 +181,13 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   };
 
   const handleAddIngredientToList = (ing: string) => {
-    // 1. Captura a parte de quantidade/unidade
     const qtyMatch = ing.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:(gr|g|kg|ml|l|unid|un|colher|xícara|xic|chá|sopa)\b)?/i);
     let quantity = "1";
-    
     if (qtyMatch) {
         quantity = qtyMatch[0].trim();
-        // Se for apenas número sem unidade, adicionamos um "x"
-        if (/^\d+$/.test(quantity)) {
-            quantity += "x";
-        }
+        if (/^\d+$/.test(quantity)) quantity += "x";
     }
-    
-    // 2. Extrai o nome limpando a parte de quantidade que já pegamos
     const nameOnly = extractCleanName(ing);
-                       
     onAddToShoppingList(nameOnly || ing, quantity);
   };
 
@@ -254,6 +240,22 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                     </div>
                     <h2 className="text-3xl font-black text-stone-900 mb-2 mt-4">Sensacional!</h2>
                     <p className="text-stone-500 mb-8 text-sm font-medium">Você concluiu esta receita com maestria.</p>
+                    
+                    <div className="grid grid-cols-3 gap-2 mb-8">
+                        <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100">
+                            <Zap className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
+                            <p className="text-[10px] font-black text-emerald-800 uppercase">+{100 + (recipe.used_ingredients.length * 10)} XP</p>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100">
+                            <Leaf className="w-5 h-5 text-blue-600 mx-auto mb-1" />
+                            <p className="text-[10px] font-black text-blue-800 uppercase">+0.4kg</p>
+                        </div>
+                        <div className="bg-amber-50 p-3 rounded-2xl border border-amber-100">
+                            <TrendingUp className="w-5 h-5 text-amber-600 mx-auto mb-1" />
+                            <p className="text-[10px] font-black text-amber-800 uppercase">+R$18</p>
+                        </div>
+                    </div>
+
                     <div className="bg-stone-50 rounded-3xl p-6 mb-8 border border-stone-100">
                         <p className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-4">Nota do Prato</p>
                         <div className="flex justify-center gap-2">
@@ -265,7 +267,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                         </div>
                     </div>
                     <button onClick={() => { setCookingMode(false); setIsFinished(false); if (onFinishCooking) onFinishCooking(); }} className="w-full bg-emerald-600 text-white font-black py-5 rounded-[2rem] shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all">
-                      Concluir <Sparkles className="w-5 h-5" />
+                      Coletar Recompensas <Sparkles className="w-5 h-5" />
                     </button>
                 </motion.div>
             </motion.div>
