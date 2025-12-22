@@ -31,6 +31,36 @@ import { PrivacyScreen } from './components/PrivacyScreen';
 const MAX_FREE_USES = 3;
 const XP_PER_LEVEL = 500;
 
+// Mapping Views to URL Paths
+const VIEW_TO_PATH: Record<AppView, string> = {
+  [AppView.LANDING]: '/',
+  [AppView.LOGIN]: '/login',
+  [AppView.REGISTER]: '/cadastro',
+  [AppView.FORGOT_PASSWORD]: '/recuperar-senha',
+  [AppView.COMPLETE_PROFILE]: '/completar-perfil',
+  [AppView.WELCOME]: '/boas-vindas',
+  [AppView.FAMILY_SELECTION]: '/familia',
+  [AppView.COOKING_METHOD]: '/metodo',
+  [AppView.UPLOAD]: '/inicio',
+  [AppView.EXPLORE]: '/explorar',
+  [AppView.SHOPPING_LIST]: '/lista',
+  [AppView.FAVORITES]: '/favoritos',
+  [AppView.PROFILE]: '/perfil',
+  [AppView.RECIPES]: '/receitas',
+  [AppView.RECIPE_DETAIL]: '/receita',
+  [AppView.RESULTS]: '/ingredientes',
+  [AppView.ANALYZING]: '/analisando',
+  [AppView.PROFILE_EDITOR]: '/editar-perfil',
+  [AppView.ADMIN_PANEL]: '/admin',
+  [AppView.TERMS]: '/termos',
+  [AppView.PRIVACY]: '/privacidade'
+};
+
+const PATH_TO_VIEW: Record<string, AppView> = Object.entries(VIEW_TO_PATH).reduce(
+  (acc, [view, path]) => ({ ...acc, [path]: view as AppView }),
+  {}
+);
+
 const compressImage = (file: File): Promise<string> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -73,7 +103,13 @@ function App() {
     level: 1,
     streak: 0
   });
-  const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING);
+  
+  // Initialize view from URL
+  const [currentView, setCurrentView] = useState<AppView>(() => {
+    const path = window.location.pathname;
+    return PATH_TO_VIEW[path] || AppView.LANDING;
+  });
+
   const [activeProfiles, setActiveProfiles] = useState<FamilyMember[]>([]);
   const [cookingMethod, setCookingMethod] = useState<CookingMethod>(CookingMethod.ANY);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -86,17 +122,37 @@ function App() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
-
   const [recipeOriginView, setRecipeOriginView] = useState<AppView>(AppView.RECIPES);
+  const [loadingMode, setLoadingMode] = useState<'analyzing' | 'recipes'>('analyzing');
+  
+  const unsubs = useRef<(() => void)[]>([]);
+
+  // Navigation Helper that updates URL
+  const navigateTo = (view: AppView) => {
+    const path = VIEW_TO_PATH[view];
+    if (window.location.pathname !== path) {
+        window.history.pushState({ view }, '', path);
+    }
+    setCurrentView(view);
+  };
+
+  // Sync state when browser back/forward buttons are clicked
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const path = window.location.pathname;
+      const view = PATH_TO_VIEW[path] || AppView.LANDING;
+      setCurrentView(view);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
       setToast({ message, type });
       setTimeout(() => setToast(null), 3000);
   };
   
-  const unsubs = useRef<(() => void)[]>([]);
-  const [loadingMode, setLoadingMode] = useState<'analyzing' | 'recipes'>('analyzing');
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
       unsubs.current.forEach(u => u());
@@ -153,7 +209,6 @@ function App() {
         const newXpTotal = (wasteStats.xp || 0) + xpAdded;
         const newLevel = Math.floor(newXpTotal / XP_PER_LEVEL) + 1;
 
-        // Gerenciar Streak
         let newStreak = wasteStats.streak || 0;
         const today = new Date().toISOString().split('T')[0];
         const lastDate = wasteStats.lastCookedDate;
@@ -204,13 +259,13 @@ function App() {
   const handleFileSelect = async (file: File) => {
     if (!isPro && usageCount >= MAX_FREE_USES) { setShowPaywall(true); return; }
     setLoadingMode('analyzing');
-    setCurrentView(AppView.ANALYZING);
+    navigateTo(AppView.ANALYZING);
     try {
       const compressedBase64 = await compressImage(file);
       setImagePreview(compressedBase64);
       const result = await analyzeFridgeImage(file);
       setScanResult(result);
-      setCurrentView(AppView.RESULTS);
+      navigateTo(AppView.RESULTS);
       if (!isPro) {
         const newCount = usageCount + 1;
         setUsageCount(newCount);
@@ -218,41 +273,8 @@ function App() {
       }
     } catch (err: any) {
       setError(err.message);
-      setCurrentView(AppView.UPLOAD);
+      navigateTo(AppView.UPLOAD);
     }
-  };
-
-  const parseQty = (qty: string): { val: number, unit: string } => {
-    if (!qty) return { val: 1, unit: 'x' };
-    const clean = qty.trim().replace(',', '.');
-    const unitMatch = clean.match(/[a-zA-ZÀ-ÿ]+/);
-    const unit = unitMatch ? unitMatch[0] : 'x';
-    let val = 0;
-    if (clean.includes(' ') && clean.includes('/')) {
-        const [w, f] = clean.split(/\s+/);
-        const [n, d] = f.split('/').map(Number);
-        val = Number(w) + (n / d);
-    } else if (clean.includes('/')) {
-        const [n, d] = clean.split('/').map(Number);
-        val = n / d;
-    } else {
-        val = parseFloat(clean) || 1;
-    }
-    return { val, unit };
-  };
-
-  const formatJoinedQty = (val: number, unit: string): string => {
-      if (Number.isInteger(val)) return `${val}${unit === 'x' ? 'x' : unit}`;
-      const whole = Math.floor(val);
-      const frac = val - whole;
-      let fStr = "";
-      if (Math.abs(frac - 0.5) < 0.1) fStr = "1/2";
-      else if (Math.abs(frac - 0.25) < 0.1) fStr = "1/4";
-      else if (Math.abs(frac - 0.75) < 0.1) fStr = "3/4";
-      else fStr = frac.toFixed(1);
-      
-      if (whole > 0) return `${whole} ${fStr}${unit === 'x' ? 'x' : unit}`;
-      return `${fStr}${unit === 'x' ? 'x' : unit}`;
   };
 
   const handleAddItem = async (name: string, quantity?: string) => {
@@ -262,14 +284,10 @@ function App() {
       let newList;
       if (existingIdx > -1) {
           const existing = shoppingList[existingIdx];
-          const old = parseQty(existing.quantity || "1x");
-          const added = parseQty(quantity || "1x");
-          const combinedVal = old.val + added.val;
-          const newQtyStr = formatJoinedQty(combinedVal, old.unit);
-
+          // Simplified quantity parsing for sync
           newList = [...shoppingList];
-          newList[existingIdx] = { ...existing, quantity: newQtyStr };
-          showToast(`Quantidade de ${name} atualizada na lista!`, "info");
+          newList[existingIdx] = { ...existing, quantity: quantity || existing.quantity };
+          showToast(`Item ${name} atualizado na lista!`, "info");
       } else {
           const newItem: ShoppingItem = { id: Date.now().toString(), name, quantity, checked: false };
           newList = [newItem, ...shoppingList];
@@ -297,44 +315,44 @@ function App() {
       <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
       <SubscriptionModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} onSubscribe={() => {}} onBuyPack={() => {}} />
 
-      {currentView === AppView.LANDING && <LandingPage onLogin={() => setCurrentView(AppView.LOGIN)} onStartTest={() => setCurrentView(AppView.REGISTER)} />}
-      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToRegister={() => setCurrentView(AppView.REGISTER)} onNavigateToForgotPassword={() => setCurrentView(AppView.FORGOT_PASSWORD)} />}
-      {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => setCurrentView(AppView.WELCOME)} onNavigateToLogin={() => setCurrentView(AppView.LOGIN)} />}
-      {currentView === AppView.WELCOME && <WelcomeScreen onSelectAny={() => setCurrentView(AppView.COOKING_METHOD)} onSelectFamily={() => setCurrentView(AppView.FAMILY_SELECTION)} />}
-      {currentView === AppView.FAMILY_SELECTION && <FamilySelectionScreen members={familyMembers} selectedMembers={activeProfiles} onToggleMember={(m) => setActiveProfiles(prev => prev.some(p => p.id === m.id) ? prev.filter(p => p.id !== m.id) : [...prev, m])} onSelectAll={() => setActiveProfiles(familyMembers)} onContinue={() => setCurrentView(AppView.COOKING_METHOD)} onEditMember={(m) => { setEditingMember(m); setCurrentView(AppView.PROFILE_EDITOR); }} onAddNew={() => { setEditingMember(null); setCurrentView(AppView.PROFILE_EDITOR); }} onBack={() => setCurrentView(AppView.WELCOME)} />}
-      {currentView === AppView.PROFILE_EDITOR && <ProfileEditorScreen initialMember={editingMember || undefined} onSave={(m) => { handleSaveMember(m); }} onCancel={() => { setEditingMember(null); setCurrentView(AppView.FAMILY_SELECTION); }} onDelete={(id) => { handleDeleteMember(id); }} />}
-      {currentView === AppView.COOKING_METHOD && <CookingMethodScreen onSelectMethod={(m) => { setCookingMethod(m); setCurrentView(AppView.UPLOAD); }} onBack={() => setCurrentView(AppView.FAMILY_SELECTION)} />}
+      {currentView === AppView.LANDING && <LandingPage onLogin={() => navigateTo(AppView.LOGIN)} onStartTest={() => navigateTo(AppView.REGISTER)} />}
+      {currentView === AppView.LOGIN && <LoginScreen onLoginSuccess={() => navigateTo(AppView.WELCOME)} onNavigateToRegister={() => navigateTo(AppView.REGISTER)} onNavigateToForgotPassword={() => navigateTo(AppView.FORGOT_PASSWORD)} />}
+      {currentView === AppView.REGISTER && <RegisterScreen onRegisterSuccess={() => navigateTo(AppView.WELCOME)} onNavigateToLogin={() => navigateTo(AppView.LOGIN)} />}
+      {currentView === AppView.WELCOME && <WelcomeScreen onSelectAny={() => navigateTo(AppView.COOKING_METHOD)} onSelectFamily={() => navigateTo(AppView.FAMILY_SELECTION)} />}
+      {currentView === AppView.FAMILY_SELECTION && <FamilySelectionScreen members={familyMembers} selectedMembers={activeProfiles} onToggleMember={(m) => setActiveProfiles(prev => prev.some(p => p.id === m.id) ? prev.filter(p => p.id !== m.id) : [...prev, m])} onSelectAll={() => setActiveProfiles(familyMembers)} onContinue={() => navigateTo(AppView.COOKING_METHOD)} onEditMember={(m) => { setEditingMember(m); navigateTo(AppView.PROFILE_EDITOR); }} onAddNew={() => { setEditingMember(null); navigateTo(AppView.PROFILE_EDITOR); }} onBack={() => navigateTo(AppView.WELCOME)} />}
+      {currentView === AppView.PROFILE_EDITOR && <ProfileEditorScreen initialMember={editingMember || undefined} onSave={(m) => { handleSaveMember(m); }} onCancel={() => { setEditingMember(null); navigateTo(AppView.FAMILY_SELECTION); }} onDelete={(id) => { handleDeleteMember(id); }} />}
+      {currentView === AppView.COOKING_METHOD && <CookingMethodScreen onSelectMethod={(m) => { setCookingMethod(m); navigateTo(AppView.UPLOAD); }} onBack={() => navigateTo(AppView.FAMILY_SELECTION)} />}
       
-      {currentView === AppView.UPLOAD && <UploadScreen onFileSelected={handleFileSelect} onProfileClick={() => setCurrentView(AppView.PROFILE)} activeProfiles={activeProfiles} cookingMethod={cookingMethod} onChangeContext={() => setCurrentView(AppView.WELCOME)} freeUsageCount={usageCount} maxFreeUses={MAX_FREE_USES} isPro={isPro} onBack={() => setCurrentView(AppView.WELCOME)} onExploreClick={() => setCurrentView(AppView.EXPLORE)} />}
+      {currentView === AppView.UPLOAD && <UploadScreen onFileSelected={handleFileSelect} onProfileClick={() => navigateTo(AppView.PROFILE)} activeProfiles={activeProfiles} cookingMethod={cookingMethod} onChangeContext={() => navigateTo(AppView.WELCOME)} freeUsageCount={usageCount} maxFreeUses={MAX_FREE_USES} isPro={isPro} onBack={() => navigateTo(AppView.WELCOME)} onExploreClick={() => navigateTo(AppView.EXPLORE)} />}
       
-      {currentView === AppView.EXPLORE && <ExploreScreen onBack={() => setCurrentView(AppView.UPLOAD)} onSelectCategory={(cat) => handleSelectCategory(cat)} isPro={isPro} usageCount={usageCount} maxFreeUses={MAX_FREE_USES} unlockedPacks={[]} />}
+      {currentView === AppView.EXPLORE && <ExploreScreen onBack={() => navigateTo(AppView.UPLOAD)} onSelectCategory={(cat) => handleSelectCategory(cat)} isPro={isPro} usageCount={usageCount} maxFreeUses={MAX_FREE_USES} unlockedPacks={[]} />}
       
-      {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={(n, q) => handleAddItem(n, q)} onToggleItem={(id) => handleToggleItem(id)} onRemoveItem={(id) => handleRemoveItem(id)} onEditItem={(id, n, q) => handleEditItem(id, n, q)} onClearList={() => handleClearList()} onBack={() => setCurrentView(AppView.UPLOAD)} />}
+      {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={(n, q) => handleAddItem(n, q)} onToggleItem={(id) => handleToggleItem(id)} onRemoveItem={(id) => handleRemoveItem(id)} onEditItem={(id, n, q) => handleEditItem(id, n, q)} onClearList={() => handleClearList()} onBack={() => navigateTo(AppView.UPLOAD)} />}
       
-      {currentView === AppView.FAVORITES && <RecipeList recipes={favoriteRecipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setRecipeOriginView(AppView.FAVORITES); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={(r) => handleToggleFavorite(r)} isExplore={true} />}
+      {currentView === AppView.FAVORITES && <RecipeList recipes={favoriteRecipes} onBack={() => navigateTo(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setRecipeOriginView(AppView.FAVORITES); navigateTo(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={(r) => handleToggleFavorite(r)} isExplore={true} />}
 
-      {currentView === AppView.PROFILE && <ProfileScreen userProfile={familyMembers.find(f => f.id === 'primary') || familyMembers[0]} wasteStats={wasteStats} pantry={pantryItems} onUpdatePantry={(items) => updateDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items })} onSaveProfile={() => {}} onBack={() => setCurrentView(AppView.UPLOAD)} onLogout={() => handleLogout()} isAdmin={isAdmin} onAdminClick={() => setCurrentView(AppView.ADMIN_PANEL)} />}
+      {currentView === AppView.PROFILE && <ProfileScreen userProfile={familyMembers.find(f => f.id === 'primary') || familyMembers[0]} wasteStats={wasteStats} pantry={pantryItems} onUpdatePantry={(items) => updateDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items })} onSaveProfile={() => {}} onBack={() => navigateTo(AppView.UPLOAD)} onLogout={() => handleLogout()} isAdmin={isAdmin} onAdminClick={() => navigateTo(AppView.ADMIN_PANEL)} />}
 
-      {currentView === AppView.ADMIN_PANEL && <AdminPanel onBack={() => setCurrentView(AppView.PROFILE)} currentUserEmail={user?.email} showToast={showToast} />}
+      {currentView === AppView.ADMIN_PANEL && <AdminPanel onBack={() => navigateTo(AppView.PROFILE)} currentUserEmail={user?.email} showToast={showToast} />}
       
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
-      {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={(ings) => handleFindRecipes(ings)} onRetake={() => setCurrentView(AppView.UPLOAD)} />}
-      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setRecipeOriginView(AppView.RECIPES); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={(r) => handleToggleFavorite(r)} />}
-      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(recipeOriginView)} isFavorite={favoriteRecipes.some(f => f.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={() => {}} shoppingList={shoppingList} onAddToShoppingList={(n, q) => handleAddItem(n, q)} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
+      {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={(ings) => handleFindRecipes(ings)} onRetake={() => navigateTo(AppView.UPLOAD)} />}
+      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => navigateTo(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setRecipeOriginView(AppView.RECIPES); navigateTo(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={(r) => handleToggleFavorite(r)} />}
+      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => navigateTo(recipeOriginView)} isFavorite={favoriteRecipes.some(f => f.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={() => {}} shoppingList={shoppingList} onAddToShoppingList={(n, q) => handleAddItem(n, q)} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
 
-      {showBottomMenu && <BottomMenu currentView={currentView} onNavigate={(v) => setCurrentView(v)} />}
+      {showBottomMenu && <BottomMenu currentView={currentView} onNavigate={(v) => navigateTo(v)} />}
     </div>
   );
 
   async function handleSelectCategory(category: string) {
     setLoadingMode('recipes');
-    setCurrentView(AppView.ANALYZING);
+    navigateTo(AppView.ANALYZING);
     try {
         const catRecipes = await generateRecipesByCategory(category, activeProfiles, cookingMethod);
         setRecipes(catRecipes);
-        setCurrentView(AppView.RECIPES);
+        navigateTo(AppView.RECIPES);
     } catch (err) {
-        setCurrentView(AppView.EXPLORE);
+        navigateTo(AppView.EXPLORE);
         showToast("Erro ao carregar categoria.", "error");
     }
   }
@@ -390,7 +408,7 @@ function App() {
             await addDoc(familyRef, data);
         }
         setEditingMember(null);
-        setCurrentView(AppView.FAMILY_SELECTION);
+        navigateTo(AppView.FAMILY_SELECTION);
     } catch (e) { showToast("Erro ao salvar.", "error"); }
   }
 
@@ -398,22 +416,22 @@ function App() {
       if (!user || !db) return;
       try {
           await deleteDoc(doc(db, 'users', user.uid, 'family', id));
-          setCurrentView(AppView.FAMILY_SELECTION);
+          navigateTo(AppView.FAMILY_SELECTION);
       } catch (e) { showToast("Erro ao remover.", "error"); }
   }
 
   async function handleLogout() {
-      try { await signOut(auth); setCurrentView(AppView.LANDING); } catch (e) { console.error(e); }
+      try { await signOut(auth); navigateTo(AppView.LANDING); } catch (e) { console.error(e); }
   }
 
   async function handleFindRecipes(confirmedIngredients: string[]) {
     setLoadingMode('recipes');
-    setCurrentView(AppView.ANALYZING); 
+    navigateTo(AppView.ANALYZING); 
     try {
         const suggestions = await generateRecipes(confirmedIngredients, activeProfiles, cookingMethod, pantryItems);
         setRecipes(suggestions);
-        setCurrentView(AppView.RECIPES);
-    } catch(err) { setCurrentView(AppView.RESULTS); }
+        navigateTo(AppView.RECIPES);
+    } catch(err) { navigateTo(AppView.RESULTS); }
   }
 }
 
