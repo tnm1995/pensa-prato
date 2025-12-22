@@ -79,6 +79,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   ];
 
+  const approvalAvatars = [
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop"
+  ];
+
   const menuItems = [
       { label: 'Funcionalidades', id: 'features' },
       { label: 'Avaliações', id: 'social' },
@@ -214,9 +221,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               
               <div className="flex items-center gap-3 px-4 py-2 rounded-2xl hover:bg-white/50 transition-colors cursor-default">
                 <div className="flex -space-x-3">
-                    {[1,2,3,4].map(i => (
+                    {approvalAvatars.map((url, i) => (
                         <div key={i} className="w-9 h-9 rounded-full border-2 border-white bg-stone-200 overflow-hidden ring-1 ring-stone-100">
-                            <img src={`https://ui-avatars.com/api/?background=random&color=fff&name=Chef+${i}`} alt="user" />
+                            <img src={url} alt={`Usuário satisfeito ${i + 1}`} className="w-full h-full object-cover" />
                         </div>
                     ))}
                 </div>
