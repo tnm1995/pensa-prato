@@ -61,6 +61,7 @@ function App() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [favoriteRecipes, setFavoriteRecipes] = useState<Recipe[]>([]);
+  const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [pantryItems, setPantryItems] = useState<string[]>([]);
   const [wasteStats, setWasteStats] = useState<WasteStats>({ kgSaved: 0, moneySaved: 0, recipesCompleted: 0, badges: [] });
   const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING);
@@ -109,7 +110,10 @@ function App() {
            unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'family'), (snap: any) => setFamilyMembers(snap.docs.map((d: any) => ({ ...d.data(), id: d.id })))));
            unsubs.current.push(onSnapshot(collection(db, 'users', currentUser.uid, 'favorites'), (snap: any) => setFavoriteRecipes(snap.docs.map((d: any) => d.data()))));
            unsubs.current.push(onSnapshot(doc(db, 'users', currentUser.uid, 'settings', 'pantry'), (docSnap: any) => {
-               if (docSnap && docSnap.exists) setPantryItems(docSnap.data().items || []);
+               if (docSnap.exists) setPantryItems(docSnap.data().items || []);
+           }));
+           unsubs.current.push(onSnapshot(doc(db, 'users', currentUser.uid, 'settings', 'shoppingList'), (docSnap: any) => {
+               if (docSnap.exists) setShoppingList(docSnap.data().items || []);
            }));
         }
       } else {
@@ -120,16 +124,83 @@ function App() {
     return () => { unsubscribe(); unsubs.current.forEach(u => u()); };
   }, []);
 
+  // --- SHOPPING LIST HANDLERS ---
+  const saveShoppingList = async (newItems: ShoppingItem[]) => {
+      if (!user || !db) return;
+      try {
+          await setDoc(doc(db, 'users', user.uid, 'settings', 'shoppingList'), { items: newItems });
+      } catch (e) { console.error(e); }
+  };
+
+  const handleAddItem = (name: string, quantity?: string) => {
+      const newItem: ShoppingItem = { id: Date.now().toString(), name, quantity, checked: false };
+      const newList = [newItem, ...shoppingList];
+      setShoppingList(newList);
+      saveShoppingList(newList);
+  };
+
+  const handleToggleItem = (id: string) => {
+      const newList = shoppingList.map(i => i.id === id ? { ...i, checked: !i.checked } : i);
+      setShoppingList(newList);
+      saveShoppingList(newList);
+  };
+
+  const handleRemoveItem = (id: string) => {
+      const newList = shoppingList.filter(i => i.id !== id);
+      setShoppingList(newList);
+      saveShoppingList(newList);
+  };
+
+  const handleEditItem = (id: string, name: string, quantity: string) => {
+      const newList = shoppingList.map(i => i.id === id ? { ...i, name, quantity } : i);
+      setShoppingList(newList);
+      saveShoppingList(newList);
+  };
+
+  const handleClearList = () => {
+      if (confirm("Deseja limpar toda a sua lista?")) {
+          setShoppingList([]);
+          saveShoppingList([]);
+      }
+  };
+
+  // --- RECIPE HANDLERS ---
+  const handleToggleFavorite = async (recipe: Recipe) => {
+    if (!user || !db) return;
+    const isFav = favoriteRecipes.some(f => f.title === recipe.title);
+    try {
+        const favRef = doc(db, 'users', user.uid, 'favorites', recipe.title.replace(/\//g, '-'));
+        if (isFav) {
+            await deleteDoc(favRef);
+            showToast("Removido dos favoritos.");
+        } else {
+            await setDoc(favRef, recipe);
+            showToast("Adicionado aos favoritos!", "success");
+        }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSelectCategory = async (category: string) => {
+    setLoadingMode('recipes');
+    setCurrentView(AppView.ANALYZING);
+    try {
+        const catRecipes = await generateRecipesByCategory(category, activeProfiles, cookingMethod);
+        setRecipes(catRecipes);
+        setCurrentView(AppView.RECIPES);
+    } catch (err) {
+        setCurrentView(AppView.EXPLORE);
+        showToast("Erro ao carregar categoria.", "error");
+    }
+  };
+
   const handleSaveMember = async (member: FamilyMember) => {
     if (!user || !db) return;
     try {
         const familyRef = collection(db, 'users', user.uid, 'family');
         if (member.id && !member.id.startsWith('temp-')) {
-            // Edição de membro existente
             await setDoc(doc(familyRef, member.id), member, { merge: true });
             showToast("Perfil atualizado!", "success");
         } else {
-            // Novo membro
             const { id, ...data } = member;
             await addDoc(familyRef, data);
             showToast("Novo perfil adicionado!", "success");
@@ -137,7 +208,6 @@ function App() {
         setEditingMember(null);
         setCurrentView(AppView.FAMILY_SELECTION);
     } catch (e) {
-        console.error(e);
         showToast("Erro ao salvar perfil.", "error");
     }
   };
@@ -148,9 +218,7 @@ function App() {
           await deleteDoc(doc(db, 'users', user.uid, 'family', id));
           showToast("Perfil removido.", "success");
           setCurrentView(AppView.FAMILY_SELECTION);
-      } catch (e) {
-          showToast("Erro ao remover.", "error");
-      }
+      } catch (e) { showToast("Erro ao remover.", "error"); }
   };
 
   const handleFinishCooking = async (recipe: Recipe) => {
@@ -232,13 +300,21 @@ function App() {
       {currentView === AppView.FAMILY_SELECTION && <FamilySelectionScreen members={familyMembers} selectedMembers={activeProfiles} onToggleMember={(m) => setActiveProfiles(prev => prev.some(p => p.id === m.id) ? prev.filter(p => p.id !== m.id) : [...prev, m])} onSelectAll={() => setActiveProfiles(familyMembers)} onContinue={() => setCurrentView(AppView.COOKING_METHOD)} onEditMember={(m) => { setEditingMember(m); setCurrentView(AppView.PROFILE_EDITOR); }} onAddNew={() => { setEditingMember(null); setCurrentView(AppView.PROFILE_EDITOR); }} onBack={() => setCurrentView(AppView.WELCOME)} />}
       {currentView === AppView.PROFILE_EDITOR && <ProfileEditorScreen initialMember={editingMember || undefined} onSave={handleSaveMember} onCancel={() => { setEditingMember(null); setCurrentView(AppView.FAMILY_SELECTION); }} onDelete={handleDeleteMember} />}
       {currentView === AppView.COOKING_METHOD && <CookingMethodScreen onSelectMethod={(m) => { setCookingMethod(m); setCurrentView(AppView.UPLOAD); }} onBack={() => setCurrentView(AppView.FAMILY_SELECTION)} />}
+      
       {currentView === AppView.UPLOAD && <UploadScreen onFileSelected={handleFileSelect} onProfileClick={() => setCurrentView(AppView.PROFILE)} activeProfiles={activeProfiles} cookingMethod={cookingMethod} onChangeContext={() => setCurrentView(AppView.WELCOME)} freeUsageCount={usageCount} maxFreeUses={MAX_FREE_USES} isPro={isPro} onBack={() => setCurrentView(AppView.WELCOME)} onExploreClick={() => setCurrentView(AppView.EXPLORE)} />}
+      
+      {currentView === AppView.EXPLORE && <ExploreScreen onBack={() => setCurrentView(AppView.UPLOAD)} onSelectCategory={handleSelectCategory} isPro={isPro} usageCount={usageCount} maxFreeUses={MAX_FREE_USES} unlockedPacks={[]} />}
+      
+      {currentView === AppView.SHOPPING_LIST && <ShoppingListScreen items={shoppingList} onAddItem={handleAddItem} onToggleItem={handleToggleItem} onRemoveItem={handleRemoveItem} onEditItem={handleEditItem} onClearList={handleClearList} onBack={() => setCurrentView(AppView.UPLOAD)} />}
+      
+      {currentView === AppView.FAVORITES && <RecipeList recipes={favoriteRecipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} isExplore={true} />}
+
       {currentView === AppView.PROFILE && <ProfileScreen userProfile={familyMembers.find(f => f.id === 'primary') || familyMembers[0]} wasteStats={wasteStats} pantry={pantryItems} onUpdatePantry={(items) => updateDoc(doc(db, 'users', user.uid, 'settings', 'pantry'), { items })} onSaveProfile={() => {}} onBack={() => setCurrentView(AppView.UPLOAD)} onLogout={handleLogout} isAdmin={isAdmin} />}
       
       {currentView === AppView.ANALYZING && <LoadingScreen imagePreview={imagePreview} mode={loadingMode} />}
       {currentView === AppView.RESULTS && scanResult && <ScanResults result={scanResult} onFindRecipes={handleFindRecipes} onRetake={() => setCurrentView(AppView.UPLOAD)} />}
-      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={() => {}} />}
-      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(AppView.RECIPES)} isFavorite={favoriteRecipes.some(f => f.title === selectedRecipe.title)} onToggleFavorite={() => {}} onRate={() => {}} shoppingList={[]} onAddToShoppingList={() => {}} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
+      {currentView === AppView.RECIPES && <RecipeList recipes={recipes} onBack={() => setCurrentView(AppView.UPLOAD)} onSelectRecipe={r => { setSelectedRecipe(r); setCurrentView(AppView.RECIPE_DETAIL); }} favorites={favoriteRecipes} onToggleFavorite={handleToggleFavorite} />}
+      {currentView === AppView.RECIPE_DETAIL && selectedRecipe && <RecipeDetail recipe={selectedRecipe} onBack={() => setCurrentView(AppView.RECIPES)} isFavorite={favoriteRecipes.some(f => f.title === selectedRecipe.title)} onToggleFavorite={() => handleToggleFavorite(selectedRecipe)} onRate={() => {}} shoppingList={shoppingList} onAddToShoppingList={handleAddItem} onFinishCooking={() => handleFinishCooking(selectedRecipe)} />}
 
       <BottomMenu currentView={currentView} onNavigate={(v) => setCurrentView(v)} />
     </div>

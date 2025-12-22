@@ -5,13 +5,11 @@ import { AppView } from '../types';
 
 interface BottomMenuProps {
   currentView: AppView;
-  activeTab?: 'history' | 'favorites' | 'settings';
-  onNavigate: (view: AppView, tab?: 'history' | 'favorites' | 'settings') => void;
+  onNavigate: (view: AppView) => void;
 }
 
-export const BottomMenu: React.FC<BottomMenuProps> = ({ currentView, activeTab, onNavigate }) => {
+export const BottomMenu: React.FC<BottomMenuProps> = ({ currentView, onNavigate }) => {
   
-  // Determine active state
   const isHomeActive = [
     AppView.WELCOME, 
     AppView.FAMILY_SELECTION, 
@@ -21,14 +19,9 @@ export const BottomMenu: React.FC<BottomMenuProps> = ({ currentView, activeTab, 
     AppView.RECIPES
   ].includes(currentView);
 
-  // Favorites is active if we are in PROFILE view AND the specific tab is 'favorites'
-  const isFavoritesActive = currentView === AppView.PROFILE && activeTab === 'favorites';
-
-  // Shopping List Active
   const isShoppingActive = currentView === AppView.SHOPPING_LIST;
-
-  // Profile is active if we are in PROFILE view AND the tab is NOT 'favorites' (i.e. settings or history)
-  const isProfileActive = currentView === AppView.PROFILE && activeTab !== 'favorites';
+  const isFavoritesActive = currentView === AppView.FAVORITES;
+  const isProfileActive = currentView === AppView.PROFILE;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 pb-5 z-40 flex justify-around items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
@@ -58,7 +51,7 @@ export const BottomMenu: React.FC<BottomMenuProps> = ({ currentView, activeTab, 
       </button>
 
       <button 
-        onClick={() => onNavigate(AppView.PROFILE, 'favorites')}
+        onClick={() => onNavigate(AppView.FAVORITES)}
         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all min-w-[4rem] ${
           isFavoritesActive ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
         }`}
@@ -70,7 +63,7 @@ export const BottomMenu: React.FC<BottomMenuProps> = ({ currentView, activeTab, 
       </button>
 
       <button 
-        onClick={() => onNavigate(AppView.PROFILE, 'settings')}
+        onClick={() => onNavigate(AppView.PROFILE)}
         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all min-w-[4rem] ${
           isProfileActive ? 'text-emerald-600' : 'text-gray-400 hover:text-gray-600'
         }`}
