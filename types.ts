@@ -10,7 +10,7 @@ export interface ScanResult {
 }
 
 export interface TimerBreakdown {
-  label: string; // ex: "Cozinhar Arroz", "Assar Frango", "Tempo de Forno"
+  label: string; 
   minutes: number;
 }
 
@@ -32,15 +32,22 @@ export interface Recipe {
   tags: string[];
   image?: string;
   timers?: TimerBreakdown[];
-  rating?: number; // Nova propriedade para armazenar a nota (1-5)
+  rating?: number; 
+}
+
+export interface WasteStats {
+  kgSaved: number;
+  moneySaved: number;
+  recipesCompleted: number;
+  badges: string[]; // IDs das medalhas conquistadas
 }
 
 export interface FamilyMember {
   id: string;
   name: string;
-  avatar?: string; // URL or emoji
-  dislikes: string; // Comma separated string
-  restrictions: string[]; // e.g. ["Vegano", "Sem Glúten", "APLV"]
+  avatar?: string; 
+  dislikes: string; 
+  restrictions: string[]; 
   isChild?: boolean;
 }
 

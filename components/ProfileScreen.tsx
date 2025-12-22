@@ -1,441 +1,235 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, ChevronDown, ChevronUp, Package, Shield } from 'lucide-react';
-import { Recipe, FamilyMember } from '../types';
+import React, { useState } from 'react';
+import { ArrowLeft, Scale, Heart, ChevronRight, AlertCircle, ChefHat, LogOut, Star, Save, X, Utensils, Coins, Leaf, Trophy, Lock, ShieldCheck, TrendingUp, ShoppingBasket, Settings, Info } from 'lucide-react';
+import { Recipe, FamilyMember, WasteStats } from '../types';
 
 interface ProfileScreenProps {
   userProfile: FamilyMember;
+  wasteStats: WasteStats;
+  pantry: string[];
+  onUpdatePantry: (items: string[]) => void;
   onSaveProfile: (member: FamilyMember) => void;
   onBack: () => void;
-  favorites: Recipe[];
-  onSelectRecipe: (recipe: Recipe) => void;
-  initialTab?: 'history' | 'favorites' | 'settings';
   onLogout: () => void;
-  pantryItems?: string[];
-  onUpdatePantry?: (items: string[]) => void;
-  recipesCount?: number;
   isAdmin?: boolean;
-  onOpenAdmin?: () => void;
 }
+
+const ALL_BADGES = [
+    { id: 'aprendiz', name: 'Aprendiz de Chef', icon: ChefHat, color: 'text-blue-500', bg: 'bg-blue-50', desc: 'Sua primeira receita com a IA' },
+    { id: 'consciente', name: 'Chef Consciente', icon: Leaf, color: 'text-emerald-500', bg: 'bg-emerald-50', desc: '5 receitas salvando ingredientes' },
+    { id: 'airfryer_master', name: 'Mestre da AirFryer', icon: Utensils, color: 'text-orange-500', bg: 'bg-orange-50', desc: 'Receita perfeita na AirFryer' },
+    { id: 'heroi', name: 'Herói da Cozinha', icon: Trophy, color: 'text-amber-500', bg: 'bg-amber-50', desc: '20 receitas concluídas' },
+];
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
     userProfile, 
-    onSaveProfile, 
-    onBack, 
-    favorites = [], 
-    onSelectRecipe, 
-    initialTab = 'settings', 
-    onLogout,
-    pantryItems = [],
+    wasteStats,
+    pantry = [],
     onUpdatePantry,
-    recipesCount = 0,
-    isAdmin = false,
-    onOpenAdmin
+    onBack, 
+    onLogout,
+    isAdmin = false
 }) => {
-  // Safe destructuring with defaults to avoid crash if profile is temporarily undefined
-  const { name = 'Usuário', avatar = '', dislikes: initialDislikes = '', restrictions: initialRestrictions = [] } = userProfile || {};
+  const { name = 'Usuário', avatar = '', restrictions = [], dislikes = '' } = userProfile || {};
+  const [isEditingPantry, setIsEditingPantry] = useState(false);
+  const [tempPantry, setTempPantry] = useState(pantry.join(', '));
 
-  // If initialTab is favorites, we treat it as a separate view mode. 
-  // Otherwise, we default to the main profile view (which now contains settings directly).
-  const isFavoritesView = initialTab === 'favorites';
-  
-  // Local state for editing profile
-  const [dislikes, setDislikes] = useState(initialDislikes);
-  const [restrictions, setRestrictions] = useState<string[]>(initialRestrictions);
-  
-  // Refs for scrolling
-  const pantryRef = useRef<HTMLDivElement>(null);
-
-  // Collapsible state
-  // Auto-open Pantry if it's empty to encourage filling it out
-  const [showPantryOptions, setShowPantryOptions] = useState(pantryItems.length === 0);
-  
-  const hasInitialData = (initialDislikes && initialDislikes.length > 0) || (initialRestrictions && initialRestrictions.length > 0);
-  const [showDietaryOptions, setShowDietaryOptions] = useState(hasInitialData);
-
-  const commonRestrictions = [
-    "Vegano", "Vegetariano", "Sem Glúten", "Sem Lactose", "APLV", "Diabético", "Hipertenso"
-  ];
-
-  const commonPantry = [
-      "Sal", "Açúcar", "Óleo", "Azeite", "Pimenta", "Café", 
-      "Arroz", "Feijão", "Farinha de Trigo", "Leite", "Ovos", 
-      "Manteiga", "Vinagre", "Alho", "Cebola"
-  ];
-
-  // Sync state with prop if it changes
-  useEffect(() => {
-    if (userProfile) {
-        setDislikes(userProfile.dislikes || '');
-        setRestrictions(userProfile.restrictions || []);
-    }
-  }, [userProfile]);
-
-  const toggleRestriction = (res: string) => {
-    if (restrictions.includes(res)) {
-      setRestrictions(restrictions.filter(r => r !== res));
-    } else {
-      setRestrictions([...restrictions, res]);
-    }
+  const handleSavePantry = () => {
+      const items = tempPantry.split(',').map(i => i.trim()).filter(i => i.length > 0);
+      onUpdatePantry(items);
+      setIsEditingPantry(false);
   };
 
-  const togglePantryItem = (item: string) => {
-      if (onUpdatePantry) {
-          if (pantryItems.includes(item)) {
-              onUpdatePantry(pantryItems.filter(i => i !== item));
-          } else {
-              onUpdatePantry([...pantryItems, item]);
-          }
-      }
-  };
-
-  const handleSavePreferences = () => {
-    const updatedProfile: FamilyMember = {
-        ...userProfile,
-        dislikes,
-        restrictions
-    };
-    onSaveProfile(updatedProfile);
-  };
-
-  const scrollToPantry = () => {
-      setShowPantryOptions(true);
-      setTimeout(() => {
-          pantryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-  };
-  
-  // Stats vinculados aos dados reais
-  const stats = [
-    { label: "Receitas Feitas", value: recipesCount.toString(), icon: ChefHat, color: "text-orange-500", bg: "bg-orange-50" }, 
-    { 
-        label: "Na Despensa", 
-        value: pantryItems.length.toString(), 
-        icon: Scale, 
-        color: "text-emerald-500", 
-        bg: "bg-emerald-50",
-        action: scrollToPantry // Link to open pantry
-    },
-    { label: "Favoritos", value: favorites.length.toString(), icon: Heart, color: "text-red-500", bg: "bg-red-50" },
-  ];
-
-  // Helper to render avatar
-  const renderAvatar = () => {
-      const isImage = avatar && (avatar.startsWith('http') || avatar.startsWith('data:'));
-      
-      if (isImage) {
-        return <img src={avatar} alt={name} className="w-full h-full object-cover" />;
-      }
-      if (avatar) {
-        return <div className="w-full h-full flex items-center justify-center bg-white text-5xl">{avatar}</div>;
-      }
-      return <img src={`https://ui-avatars.com/api/?name=${name}&background=10b981&color=fff`} alt={name} className="w-full h-full object-cover" />;
-  };
-
-  // --- LAYOUT EXCLUSIVO DE FAVORITOS ---
-  if (isFavoritesView) {
-    return (
-      <div className="min-h-screen bg-gray-50 pb-24">
-        {/* Header Favoritos */}
-        <div className="bg-white shadow-sm pt-4 px-6 pb-4 sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-             <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
-                <ArrowLeft className="w-6 h-6 text-gray-600" />
-             </button>
-             <h1 className="text-xl font-bold text-gray-900">Meus Favoritos</h1>
-             <div className="w-10"></div>
-          </div>
-        </div>
-
-        <div className="px-4 mt-6 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-          {favorites.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm mx-auto max-w-sm">
-                <div className="bg-red-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <Heart className="w-10 h-10 text-red-300 fill-current" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-800 mb-1">Nenhuma favorita</h3>
-                <p className="text-sm text-gray-500 max-w-[200px] mx-auto">
-                    Toque no coração ❤️ nas receitas para salvar aqui.
-                </p>
-            </div>
-          ) : (
-            favorites.map((recipe, idx) => (
-                <div 
-                    key={idx} 
-                    onClick={() => onSelectRecipe(recipe)}
-                    className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:border-emerald-200 hover:shadow-md transition-all group"
-                >
-                    <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-bold text-gray-900 text-lg leading-tight pr-4">{recipe.title}</h4>
-                        <div className="p-1 bg-red-50 rounded-full">
-                            <Heart className="w-4 h-4 text-red-500 fill-current" />
-                        </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <span className="flex items-center gap-1 text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded-md">
-                            <ClockIcon className="w-3 h-3" /> {recipe.time_minutes} min
-                        </span>
-                        <span className="flex items-center gap-1 text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded-md">
-                            {recipe.difficulty}
-                        </span>
-                        {recipe.rating && recipe.rating > 0 && (
-                            <span className="flex items-center gap-0.5 text-amber-50 bg-amber-50 px-2 py-1 rounded-md text-xs font-bold">
-                                <Star className="w-3 h-3 fill-current" />
-                                {recipe.rating}
-                            </span>
-                        )}
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-gray-50 pt-3">
-                        <div className="flex gap-1">
-                            {recipe.tags.slice(0, 3).map((t, i) => (
-                                <span key={i} className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-bold uppercase tracking-wide">{t}</span>
-                            ))}
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
-                    </div>
-                </div>
-            ))
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // --- LAYOUT DE PERFIL PRINCIPAL ---
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header Profile */}
-      <div className="bg-white shadow-sm pb-6 pt-4 px-6 rounded-b-[2rem] z-10 relative">
-        <div className="flex items-center justify-between mb-6">
-          <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
-            <ArrowLeft className="w-6 h-6 text-gray-600" />
+    <div className="min-h-screen bg-[#FDFCF8] pb-32 font-['Sora']">
+      
+      {/* --- HEADER --- */}
+      <div className="bg-white shadow-[0_10px_40px_rgba(0,0,0,0.03)] pb-8 pt-6 px-6 rounded-b-[3rem] z-10 relative border-b border-stone-100">
+        <div className="flex items-center justify-between mb-8">
+          <button onClick={onBack} className="p-3 -ml-2 bg-stone-50 hover:bg-stone-100 rounded-2xl transition-all">
+            <ArrowLeft className="w-5 h-5 text-stone-600" />
           </button>
-          <h1 className="text-lg font-bold text-gray-800">Meu Perfil</h1>
-          
-          {/* Admin Button (Header) */}
-          {isAdmin && onOpenAdmin ? (
-             <button 
-                onClick={onOpenAdmin} 
-                className="bg-gray-800 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 hover:bg-gray-900 transition-colors border border-gray-700"
-             >
-                <Shield className="w-3 h-3" />
-                Admin
-             </button>
-          ) : (
-             <div className="w-10 h-10"></div>
-          )}
+          <h1 className="text-lg font-bold text-stone-800">Minha Cozinha</h1>
+          <div className="p-3 bg-stone-50 rounded-2xl">
+             <ShieldCheck className="w-5 h-5 text-stone-400" />
+          </div>
         </div>
 
         <div className="flex flex-col items-center mb-8">
-          <div className="w-28 h-28 rounded-full bg-emerald-100 border-4 border-white shadow-xl flex items-center justify-center mb-4 overflow-hidden relative">
-            {renderAvatar()}
+          <div className="relative">
+              <div className="w-28 h-28 rounded-[2.5rem] bg-emerald-50 border-4 border-white shadow-2xl flex items-center justify-center mb-4 overflow-hidden rotate-3 hover:rotate-0 transition-transform duration-500">
+                <img src={avatar || `https://ui-avatars.com/api/?name=${name}&background=10b981&color=fff`} alt={name} className="w-full h-full object-cover" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-amber-400 text-white p-2 rounded-xl shadow-lg border-2 border-white">
+                  <Star className="w-4 h-4 fill-current" />
+              </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">{name}</h2>
-          <p className="text-sm text-gray-500 font-medium">Membro Principal</p>
+          <h2 className="text-2xl font-extrabold text-stone-900">{name}</h2>
+          <div className="flex items-center gap-1.5 mt-1 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-widest">Premium Ativo</span>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-4">
-          {stats.map((stat, idx) => (
-            <button 
-                key={idx} 
-                onClick={stat.action ? stat.action : undefined}
-                className={`bg-gray-50 border border-gray-100 rounded-2xl p-3 py-4 flex flex-col items-center text-center transition-all ${stat.action ? 'active:scale-95 hover:bg-gray-100 cursor-pointer' : ''}`}
-            >
-              <div className={`p-2 rounded-full ${stat.bg} ${stat.color} mb-2 shadow-sm`}>
-                <stat.icon className="w-5 h-5" />
-              </div>
-              <span className="text-xl font-bold text-gray-900 leading-none mb-1">{stat.value}</span>
-              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">{stat.label}</span>
-            </button>
-          ))}
+        {/* --- IMPACT DASHBOARD --- */}
+        <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-5 rounded-[2rem] shadow-xl shadow-emerald-100 relative overflow-hidden group">
+                <Leaf className="absolute -right-4 -bottom-4 w-20 h-20 text-white/10 rotate-12 group-hover:rotate-0 transition-transform duration-700" />
+                <div className="relative z-10">
+                    <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Comida Salva</p>
+                    <div className="flex items-baseline gap-1 text-white">
+                        <span className="text-3xl font-black">{wasteStats.kgSaved.toFixed(1)}</span>
+                        <span className="text-xs font-bold opacity-80">kg</span>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-5 rounded-[2rem] shadow-xl shadow-orange-100 relative overflow-hidden group">
+                <TrendingUp className="absolute -right-4 -bottom-4 w-20 h-20 text-white/10 -rotate-12 group-hover:rotate-0 transition-transform duration-700" />
+                <div className="relative z-10">
+                    <p className="text-[10px] font-bold text-amber-100 uppercase tracking-widest mb-1">Economia Total</p>
+                    <div className="flex items-baseline gap-1 text-white">
+                        <span className="text-xs font-bold opacity-80">R$</span>
+                        <span className="text-3xl font-black">{wasteStats.moneySaved.toFixed(0)}</span>
+                    </div>
+                </div>
+            </div>
         </div>
       </div>
 
-      {/* Main Content Area (Settings & Configs) */}
-      <div className="px-6 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="space-y-4">
-            
-            {/* Pantry Section */}
-            <div ref={pantryRef} className={`bg-white rounded-[1.5rem] shadow-sm border overflow-hidden p-6 transition-colors ${pantryItems.length === 0 ? 'border-amber-200 ring-2 ring-amber-50' : 'border-gray-100'}`}>
-                <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <Package className="w-5 h-5 text-amber-500" />
-                    Despensa Permanente
+      <div className="px-6 mt-10 space-y-10">
+        
+        {/* --- CONQUISTAS (BADGES) --- */}
+        <div>
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-bold text-stone-800 uppercase tracking-widest flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-amber-500" /> Minhas Conquistas
                 </h3>
-                
-                <button
-                    onClick={() => setShowPantryOptions(!showPantryOptions)}
-                    className="w-full flex items-center justify-between p-4 bg-amber-50 hover:bg-amber-100/50 border border-amber-100 rounded-xl transition-all group mb-4"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white rounded-full text-amber-600 shadow-sm">
-                            <Scale className="w-4 h-4" />
+                <span className="text-[10px] font-black text-emerald-600 bg-white border border-stone-100 px-3 py-1 rounded-xl shadow-sm">
+                    {wasteStats.badges.length} / {ALL_BADGES.length}
+                </span>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
+                {ALL_BADGES.map((badge) => {
+                    const isUnlocked = wasteStats.badges.includes(badge.id);
+                    return (
+                        <div key={badge.id} className={`flex-shrink-0 w-36 p-5 rounded-[2.5rem] border transition-all duration-500 flex flex-col items-center text-center ${isUnlocked ? 'bg-white border-stone-100 shadow-xl shadow-stone-200/40 scale-100' : 'bg-stone-50 border-transparent opacity-40 grayscale scale-95'}`}>
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${isUnlocked ? badge.bg + ' ' + badge.color : 'bg-stone-200 text-stone-400'}`}>
+                                {isUnlocked ? <badge.icon className="w-7 h-7" /> : <Lock className="w-6 h-6" />}
+                            </div>
+                            <p className="text-[11px] font-black text-stone-800 leading-tight mb-2">{badge.name}</p>
+                            {isUnlocked ? (
+                                <p className="text-[9px] text-stone-400 font-bold leading-relaxed">{badge.desc}</p>
+                            ) : (
+                                <div className="h-4 w-8 bg-stone-200 rounded-full animate-pulse"></div>
+                            )}
                         </div>
-                        <div className="text-left">
-                            <span className="block font-bold text-gray-800 text-sm">O que sempre tem em casa</span>
-                            <span className="block text-xs text-gray-500">
-                                {pantryItems.length} itens selecionados
-                            </span>
-                        </div>
-                    </div>
-                    {showPantryOptions ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-                </button>
+                    );
+                })}
+            </div>
+        </div>
 
-                {showPantryOptions && (
-                    <div className="flex flex-col gap-3 animate-in slide-in-from-top-2">
-                        <p className="text-xs text-gray-400 font-medium mb-1">
-                            Marque os itens que você já possui. Eles serão considerados automaticamente nas receitas.
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                            {commonPantry.map(item => {
-                                const hasItem = pantryItems.includes(item);
-                                return (
-                                    <button
-                                        key={item}
-                                        onClick={() => togglePantryItem(item)}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                                            hasItem 
-                                            ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm' 
-                                            : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        {item} {hasItem && <X className="w-3 h-3 inline ml-1 opacity-50 hover:opacity-100" />}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
+        {/* --- MINHA DESPENSA (RESTAURADA) --- */}
+        <div className="bg-white p-6 rounded-[2.5rem] border border-stone-100 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-stone-800 uppercase tracking-widest flex items-center gap-2">
+                    <ShoppingBasket className="w-5 h-5 text-emerald-600" /> Minha Despensa
+                </h3>
+                <button 
+                    onClick={() => {
+                        if (isEditingPantry) handleSavePantry();
+                        else setIsEditingPantry(true);
+                    }}
+                    className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl transition-all active:scale-95"
+                >
+                    {isEditingPantry ? 'Salvar' : 'Editar'}
+                </button>
             </div>
 
-            {/* Dietary Section */}
-            <div className="bg-white rounded-[1.5rem] shadow-sm border border-gray-100 overflow-hidden p-6 space-y-6">
-                <div>
-                    <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <AlertCircle className="w-5 h-5 text-orange-500" />
-                            Preferências Alimentares
-                    </h3>
-                    
-                    {/* Collapsible Button */}
-                    <button
-                        onClick={() => setShowDietaryOptions(!showDietaryOptions)}
-                        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all group mb-4"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-full text-emerald-600 shadow-sm border border-gray-100 group-hover:border-emerald-200">
-                                <Utensils className="w-4 h-4" />
-                            </div>
-                            <div className="text-left">
-                                <span className="block font-bold text-gray-800 text-sm">Editar Restrições</span>
-                                <span className="block text-xs text-gray-500">
-                                    {showDietaryOptions ? 'Toque para recolher' : 'Definir o que não gosta'}
-                                </span>
-                            </div>
-                        </div>
-                        {showDietaryOptions ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-                    </button>
-                    
-                    {showDietaryOptions && (
-                        <div className="animate-in slide-in-from-top-2 fade-in duration-300 border-l-2 border-emerald-100 pl-4 space-y-4">
-                            <div className="mb-4">
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
-                                    Não gosta de (separado por vírgula)
-                                </label>
-                                <textarea
-                                    value={dislikes}
-                                    onChange={(e) => setDislikes(e.target.value)}
-                                    placeholder="Ex: cebola, coentro, pimentão, quiabo..."
-                                    className="w-full p-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all bg-gray-50 text-sm h-20 resize-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
-                                    Restrições e Dietas
-                                </label>
-                                <div className="flex flex-wrap gap-2">
-                                    {commonRestrictions.map((res) => {
-                                        const isActive = restrictions.includes(res);
-                                        return (
-                                        <button
-                                            key={res}
-                                            onClick={() => toggleRestriction(res)}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                                            isActive 
-                                                ? 'bg-red-50 border-red-200 text-red-600 shadow-sm' 
-                                                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-                                            }`}
-                                        >
-                                            {res} {isActive && <X className="w-3 h-3 inline ml-1" />}
-                                        </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
+            {isEditingPantry ? (
+                <div className="space-y-3">
+                    <textarea 
+                        className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl text-xs font-medium text-stone-600 focus:ring-2 focus:ring-emerald-100 outline-none h-24"
+                        value={tempPantry}
+                        onChange={(e) => setTempPantry(e.target.value)}
+                        placeholder="Ex: Sal, Açúcar, Óleo, Arroz..."
+                    />
+                    <p className="text-[9px] text-stone-400 font-bold italic">* Separe os itens por vírgula</p>
+                </div>
+            ) : (
+                <div className="flex flex-wrap gap-2">
+                    {pantry.length > 0 ? (
+                        pantry.map((item, idx) => (
+                            <span key={idx} className="bg-stone-50 text-stone-600 text-[10px] font-bold px-3 py-1.5 rounded-xl border border-stone-100">
+                                {item}
+                            </span>
+                        ))
+                    ) : (
+                        <p className="text-[10px] text-stone-400 font-bold italic py-2">Sua despensa básica está vazia.</p>
                     )}
+                </div>
+            )}
+        </div>
 
-                    <button 
-                        onClick={handleSavePreferences}
-                        className="mt-6 w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
-                    >
-                        <Save className="w-4 h-4" />
-                        Salvar Preferências
-                    </button>
+        {/* --- RESTRIÇÕES & GOSTOS (RESTAURADO) --- */}
+        <div className="bg-white p-6 rounded-[2.5rem] border border-stone-100 shadow-sm">
+            <h3 className="text-sm font-bold text-stone-800 uppercase tracking-widest flex items-center gap-2 mb-6">
+                <AlertCircle className="w-5 h-5 text-red-500" /> Perfil Alimentar
+            </h3>
+            
+            <div className="space-y-6">
+                <div>
+                    <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Restrições Críticas</p>
+                    <div className="flex flex-wrap gap-2">
+                        {restrictions.length > 0 ? (
+                            restrictions.map((res, idx) => (
+                                <span key={idx} className="bg-red-50 text-red-600 text-[10px] font-black px-3 py-1.5 rounded-xl border border-red-100 flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                                    {res}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="text-[10px] text-emerald-600 font-bold italic">Nenhuma restrição de saúde</span>
+                        )}
+                    </div>
+                </div>
+
+                <div>
+                    <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Evitar Ingredientes</p>
+                    <div className="flex flex-wrap gap-2">
+                        {dislikes ? (
+                            dislikes.split(',').map((item, idx) => (
+                                <span key={idx} className="bg-stone-100 text-stone-500 text-[10px] font-bold px-3 py-1.5 rounded-xl border border-stone-200">
+                                    {item.trim()}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="text-[10px] text-stone-400 font-bold italic">Sem desgostos cadastrados</span>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* Help Button */}
-            <div className="bg-white rounded-[1.5rem] shadow-sm border border-gray-100 overflow-hidden">
-                    <button className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors text-left">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2.5 bg-gray-100 rounded-xl text-gray-600"><ChefHat className="w-5 h-5" /></div>
-                        <span className="font-bold text-gray-800">Ajuda e Suporte</span>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-300" />
-                </button>
+            <div className="mt-6 pt-6 border-t border-stone-50 flex items-center gap-3 text-stone-400">
+                <Info className="w-4 h-4 flex-shrink-0" />
+                <p className="text-[9px] font-bold leading-relaxed">A IA filtrará automaticamente todas as receitas baseada nessas preferências para sua segurança.</p>
             </div>
-            
-            {/* PROMINENT ADMIN BUTTON IN LIST - Only Visible if isAdmin is True */}
-            {isAdmin && onOpenAdmin && (
-                <button 
-                    onClick={onOpenAdmin}
-                    className="w-full bg-gray-800 text-white border-2 border-gray-900 font-bold p-4 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-900 transition-colors shadow-sm group animate-in zoom-in duration-300"
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="p-2.5 bg-gray-700 rounded-xl text-gray-300 shadow-sm"><Shield className="w-6 h-6" /></div>
-                        <div className="text-left">
-                            <span className="block font-bold text-lg">Painel Administrativo</span>
-                            <span className="block text-xs font-medium opacity-70">Gerenciar usuários e dados</span>
-                        </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-                </button>
-            )}
+        </div>
 
-            <button 
-                onClick={onLogout}
-                className="w-full bg-red-50 text-red-600 border border-red-100 font-bold p-5 rounded-[1.5rem] flex items-center justify-center gap-2 hover:bg-red-100 transition-colors mt-2 shadow-sm"
-            >
-                <LogOut className="w-5 h-5" />
-                Sair do App
+        {/* --- AÇÕES --- */}
+        <div className="pt-4 space-y-4">
+            <button onClick={onLogout} className="w-full py-5 bg-white border border-stone-200 text-stone-500 rounded-[2rem] font-bold text-sm flex items-center justify-center gap-3 hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all active:scale-95">
+                <LogOut className="w-5 h-5" /> Sair da Conta
             </button>
-            
-            <p className="text-center text-[10px] text-gray-400 font-medium pt-4 pb-2 select-none">
-                Versão 2.7.0 • Pensa Prato
-            </p>
+
+            <div className="text-center space-y-2 pb-10">
+                <p className="text-[10px] text-stone-300 font-black uppercase tracking-[0.2em]">Versão 2.6.0 • Pensa Prato</p>
+                <div className="flex justify-center gap-4 text-[9px] font-bold text-stone-400">
+                    <button className="hover:text-emerald-500">Termos</button>
+                    <button className="hover:text-emerald-500">Privacidade</button>
+                </div>
+            </div>
         </div>
       </div>
     </div>
   );
 };
-
-// Helper icon component
-const ClockIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
