@@ -159,9 +159,16 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const normalizeString = (str: string) => 
     str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
+  // Helper centralizado para extrair o nome do ingrediente ignorando quantidades e conectivos
+  const extractCleanName = (ing: string) => {
+      return ing
+          .replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*(?:[a-zA-ZÀ-ÿ°º]+\s+)?(?:de\s+)?/i, '')
+          .trim();
+  };
+
   const isInShoppingList = (ingredientName: string) => {
-    const rawName = ingredientName.replace(/(\d+[\/.,]\d+|\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?/g, '').trim();
-    const normalized = normalizeString(rawName);
+    const cleanName = extractCleanName(ingredientName);
+    const normalized = normalizeString(cleanName);
     if (!normalized) return false;
     
     return (shoppingList || []).some(item => {
@@ -176,10 +183,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
     const qtyMatch = ing.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)/);
     const quantity = qtyMatch ? qtyMatch[1] : "1";
     
-    // O resto da string vira o nome do item, removendo números iniciais e o conectivo "de"
-    const nameOnly = ing.replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*/, '')
-                       .replace(/^de\s+/i, '')
-                       .trim();
+    const nameOnly = extractCleanName(ing);
                        
     onAddToShoppingList(nameOnly || ing, quantity);
   };
