@@ -24,6 +24,40 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from './ImageWithFallback';
 
+const Confetti = () => {
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[120]">
+      {Array.from({ length: 80 }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ 
+            x: "50%", 
+            y: "60%", 
+            scale: 0, 
+            opacity: 1,
+            rotate: 0 
+          }}
+          animate={{ 
+            x: `${Math.random() * 120 - 10}%`, 
+            y: `${Math.random() * 120 - 10}%`,
+            scale: Math.random() * 1.5 + 0.5,
+            opacity: [1, 1, 0],
+            rotate: Math.random() * 1080
+          }}
+          transition={{ 
+            duration: Math.random() * 2.5 + 1.5, 
+            ease: "easeOut",
+            delay: Math.random() * 0.2
+          }}
+          className={`absolute w-3 h-3 rounded-sm ${
+            ['bg-amber-400', 'bg-emerald-400', 'bg-rose-400', 'bg-blue-400', 'bg-white', 'bg-purple-400'][i % 6]
+          }`}
+        />
+      ))}
+    </div>
+  );
+};
+
 interface RecipeDetailProps {
   recipe: Recipe;
   onBack: () => void;
@@ -36,28 +70,6 @@ interface RecipeDetailProps {
   onFinishCooking?: () => void;
   isExplore?: boolean;
 }
-
-const Confetti = () => {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
-      {Array.from({ length: 40 }).map((_, i) => (
-        <motion.div
-          key={i}
-          initial={{ x: "50%", y: "100%", scale: 0, opacity: 1, rotate: 0 }}
-          animate={{ 
-            x: `${Math.random() * 100}%`, 
-            y: `${Math.random() * 100}%`,
-            scale: Math.random() * 1.5 + 0.5,
-            opacity: 0,
-            rotate: Math.random() * 720
-          }}
-          transition={{ duration: Math.random() * 2 + 1.5, ease: "easeOut", delay: Math.random() * 0.5 }}
-          className={`absolute w-3 h-3 rounded-sm ${['bg-amber-400', 'bg-emerald-400', 'bg-rose-400', 'bg-blue-400', 'bg-white'][i % 5]}`}
-        />
-      ))}
-    </div>
-  );
-};
 
 export const RecipeDetail: React.FC<RecipeDetailProps> = ({ 
   recipe, 
@@ -160,9 +172,15 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   };
 
   const handleAddIngredientToList = (ing: string) => {
-    const qtyMatch = ing.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?/);
-    const quantity = qtyMatch ? qtyMatch[0] : "1x";
-    const nameOnly = ing.replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?\s*(de\s+)?/i, '').trim();
+    // Captura apenas o valor numérico/fração inicial (ex: "1", "1/2", "1 1/2", "0.5")
+    const qtyMatch = ing.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)/);
+    const quantity = qtyMatch ? qtyMatch[1] : "1";
+    
+    // O resto da string vira o nome do item, removendo números iniciais e o conectivo "de"
+    const nameOnly = ing.replace(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+[.,]\d+|\d+)\s*/, '')
+                       .replace(/^de\s+/i, '')
+                       .trim();
+                       
     onAddToShoppingList(nameOnly || ing, quantity);
   };
 
