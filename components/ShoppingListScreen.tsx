@@ -9,15 +9,6 @@ import {
   MessageCircle, 
   Pencil, 
   X,
-  Drumstick,
-  Egg,
-  Milk,
-  Apple,
-  Droplets,
-  Zap,
-  Info,
-  Package,
-  GlassWater
 } from 'lucide-react';
 import { ShoppingItem } from '../types';
 
@@ -46,25 +37,6 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
   const [editName, setEditName] = useState('');
   const [editQuantity, setEditQuantity] = useState('');
 
-  const getItemCategory = (name: string) => {
-      const n = name.toLowerCase();
-      if (n.includes('carne') || n.includes('frango') || n.includes('bacon') || n.includes('calabresa') || n.includes('presunto') || n.includes('costelinha') || n.includes('lombo') || n.includes('tender')) 
-          return { icon: Drumstick, color: 'text-rose-500', bg: 'bg-rose-50' };
-      if (n.includes('ovo')) 
-          return { icon: Egg, color: 'text-amber-500', bg: 'bg-amber-50' };
-      if (n.includes('leite') || n.includes('queijo') || n.includes('creme') || n.includes('iogurte') || n.includes('manteiga') || n.includes('requeijão') || n.includes('mussarela') || n.includes('parmesão')) 
-          return { icon: Milk, color: 'text-blue-500', bg: 'bg-blue-50' };
-      if (n.includes('cebola') || n.includes('tomate') || n.includes('batata') || n.includes('cenoura') || n.includes('abobrinha') || n.includes('pimentão') || n.includes('alface') || n.includes('fruta') || n.includes('maçã')) 
-          return { icon: Apple, color: 'text-emerald-500', bg: 'bg-emerald-50' };
-      if (n.includes('azeite') || n.includes('oleo') || n.includes('vinagre') || n.includes('shoyu') || n.includes('agua') || n.includes('suco')) 
-          return { icon: Droplets, color: 'text-cyan-500', bg: 'bg-cyan-50' };
-      if (n.includes('sal') || n.includes('pimenta') || n.includes('açúcar') || n.includes('tempero') || n.includes('oregano') || n.includes('canela')) 
-          return { icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50' };
-      if (n.includes('farinha') || n.includes('macarrão') || n.includes('arroz') || n.includes('feijão') || n.includes('biscoito') || n.includes('pão')) 
-          return { icon: Package, color: 'text-orange-500', bg: 'bg-orange-50' };
-      return { icon: ShoppingCart, color: 'text-stone-400', bg: 'bg-stone-50' };
-  };
-
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
     const value = e.target.value;
     if (/^[\d\/.,a-zA-Z\s]*$/.test(value)) {
@@ -75,6 +47,7 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
   const handleAdd = () => {
     if (newItemName.trim()) {
       let formattedQuantity = newItemQuantity.trim();
+      // Se for apenas número, adiciona o "x"
       if (/^\d+$/.test(formattedQuantity)) {
           formattedQuantity = `${formattedQuantity}x`;
       }
@@ -87,7 +60,7 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
   const startEditing = (item: ShoppingItem) => {
     setEditingId(item.id);
     setEditName(item.name);
-    setEditQuantity(item.quantity ? item.quantity.replace('x', '') : '');
+    setEditQuantity(item.quantity ? item.quantity : '');
   };
 
   const saveEdit = () => {
@@ -121,33 +94,34 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
   const checkedItems = items.filter(i => i.checked);
 
   return (
-    <div className="min-h-screen bg-[#FDFCF8] pb-32 flex flex-col font-['Sora']">
-      <div className="bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] pt-6 px-6 pb-6 sticky top-0 z-40 rounded-b-[2.5rem] border-b border-stone-100">
+    <div className="min-h-screen bg-[#FAFAFA] pb-32 flex flex-col font-['Sora']">
+      {/* HEADER LIMPO */}
+      <div className="bg-white shadow-sm pt-6 px-6 pb-6 sticky top-0 z-40 border-b border-stone-200">
         <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-                <button onClick={onBack} className="p-3 bg-stone-50 hover:bg-stone-100 rounded-2xl transition-all">
+            <div className="flex items-center gap-4">
+                <button onClick={onBack} className="p-2.5 bg-stone-100 hover:bg-stone-200 rounded-2xl transition-all">
                     <ArrowLeft className="w-5 h-5 text-stone-600" />
                 </button>
                 <div>
-                    <h1 className="text-xl font-black text-stone-900 leading-tight">Lista de Compras</h1>
-                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{items.length} itens no total</p>
+                    <h1 className="text-2xl font-black text-stone-900 leading-tight tracking-tight">Lista</h1>
+                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{items.length} itens totais</p>
                 </div>
             </div>
             
             <div className="flex items-center gap-2">
                 <button 
                     onClick={handleExportWhatsApp}
-                    className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-100 transition-all flex items-center justify-center gap-2 shadow-sm border border-emerald-100"
+                    className="p-3 text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-all"
                     title="Enviar no WhatsApp"
                 >
-                    <MessageCircle className="w-5 h-5" />
+                    <MessageCircle className="w-6 h-6" />
                 </button>
                 <button 
                     onClick={onClearList}
-                    className="p-3 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-2xl transition-all shadow-sm border border-rose-100"
+                    className="p-3 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
                     title="Limpar tudo"
                 >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-6 h-6" />
                 </button>
             </div>
         </div>
@@ -155,15 +129,15 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
 
       <div className="flex-1 p-6 max-w-lg mx-auto w-full">
         
-        {/* INPUT DE ADICIONAR */}
+        {/* INPUT DE ADICIONAR - MAIOR E MAIS CLARO */}
         <div className="flex gap-2 mb-10 items-stretch">
-          <div className="flex-1 bg-white flex items-center pl-4 pr-2 rounded-[1.5rem] border border-stone-200 shadow-sm focus-within:ring-4 focus-within:ring-emerald-50 focus-within:border-emerald-400 transition-all overflow-hidden group">
+          <div className="flex-1 bg-white flex items-center pl-4 pr-2 rounded-[1.5rem] border-2 border-stone-200 shadow-sm focus-within:border-emerald-500 transition-all overflow-hidden">
             <input 
               type="text"
               value={newItemQuantity}
               onChange={(e) => handleQuantityChange(e, setNewItemQuantity)}
               placeholder="Qtd"
-              className="w-14 py-4 bg-transparent outline-none text-stone-800 placeholder-stone-300 font-black text-center border-r border-stone-100 mr-2 text-sm"
+              className="w-16 py-4 bg-transparent outline-none text-emerald-600 placeholder-stone-300 font-black text-center border-r border-stone-100 mr-2 text-sm"
             />
             <input 
               type="text"
@@ -171,44 +145,38 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
               onChange={(e) => setNewItemName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
               placeholder="O que falta comprar?"
-              className="flex-1 py-4 bg-transparent outline-none text-stone-800 placeholder-stone-300 font-bold text-sm"
+              className="flex-1 py-4 bg-transparent outline-none text-stone-800 placeholder-stone-300 font-bold text-base"
             />
           </div>
           
           <button 
             onClick={handleAdd}
             disabled={!newItemName.trim()}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-30 disabled:grayscale text-white px-5 rounded-[1.5rem] shadow-lg shadow-emerald-200 transition-all active:scale-95 flex-shrink-0"
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-30 text-white px-6 rounded-[1.5rem] shadow-lg shadow-emerald-100 transition-all active:scale-95 flex-shrink-0"
           >
-            <Plus className="w-6 h-6 stroke-[3px]" />
+            <Plus className="w-7 h-7 stroke-[3px]" />
           </button>
         </div>
 
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-700">
-            <div className="w-28 h-28 bg-stone-100 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-inner rotate-3">
-               <ShoppingCart className="w-12 h-12 text-stone-300" />
-            </div>
-            <h3 className="text-xl font-black text-stone-800">Geladeira Vazia?</h3>
-            <p className="text-sm text-stone-400 text-center max-w-[220px] mt-2 font-medium leading-relaxed">
-              Sua lista está vazia. Adicione itens ou deixe o Chef IA sugerir o que falta!
-            </p>
+          <div className="flex flex-col items-center justify-center py-24 opacity-40">
+            <ShoppingCart className="w-16 h-16 text-stone-300 mb-4" />
+            <h3 className="text-xl font-black text-stone-800">Sua lista está vazia</h3>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-10">
             
+            {/* ITENS ATIVOS */}
             {activeItems.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-4 pl-1">Para Comprar ({activeItems.length})</h4>
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-6 pl-1">Itens Pendentes ({activeItems.length})</h4>
                 {activeItems.map((item) => {
                   const isEditing = editingId === item.id;
-                  const cat = getItemCategory(item.name);
-                  const Icon = cat.icon;
                   
                   return (
                     <div 
                         key={item.id}
-                        className={`flex items-center bg-white p-3.5 rounded-[2rem] shadow-sm border transition-all duration-300 ${isEditing ? 'border-emerald-300 ring-4 ring-emerald-50 scale-[1.02]' : 'border-stone-100 hover:border-emerald-200 hover:shadow-md'}`}
+                        className={`flex items-center bg-white p-4 rounded-[2rem] shadow-sm border-2 transition-all duration-300 ${isEditing ? 'border-emerald-500 scale-[1.02]' : 'border-stone-100 hover:border-stone-200'}`}
                     >
                         {isEditing ? (
                             <div className="flex-1 flex items-center gap-2">
@@ -216,7 +184,7 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
                                     type="text"
                                     value={editQuantity}
                                     onChange={(e) => handleQuantityChange(e, setEditQuantity)}
-                                    className="w-12 p-2 bg-stone-50 rounded-xl text-center font-black text-emerald-600 outline-none text-xs"
+                                    className="w-16 p-3 bg-stone-50 rounded-xl text-center font-black text-emerald-600 outline-none text-sm"
                                     autoFocus
                                 />
                                 <input 
@@ -224,48 +192,41 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
-                                    className="flex-1 p-2 bg-stone-50 rounded-xl outline-none font-bold text-stone-800 text-sm"
+                                    className="flex-1 p-3 bg-stone-50 rounded-xl outline-none font-bold text-stone-800 text-base"
                                 />
-                                <button onClick={saveEdit} className="p-2 bg-emerald-600 text-white rounded-xl shadow-md"><Check className="w-4 h-4 stroke-[3px]" /></button>
-                                <button onClick={() => setEditingId(null)} className="p-2 bg-stone-100 text-stone-400 rounded-xl"><X className="w-4 h-4" /></button>
+                                <button onClick={saveEdit} className="p-3 bg-emerald-600 text-white rounded-xl shadow-md"><Check className="w-5 h-5 stroke-[3px]" /></button>
+                                <button onClick={() => setEditingId(null)} className="p-3 bg-stone-100 text-stone-400 rounded-xl"><X className="w-5 h-5" /></button>
                             </div>
                         ) : (
                             <>
                                 <button
                                     onClick={() => onToggleItem(item.id)}
-                                    className="w-7 h-7 rounded-full border-2 border-stone-200 hover:border-emerald-500 mr-4 flex items-center justify-center transition-all bg-white shadow-sm shrink-0 active:scale-90"
+                                    className="w-8 h-8 rounded-full border-4 border-stone-100 hover:border-emerald-200 mr-4 flex items-center justify-center transition-all bg-white shadow-inner shrink-0 active:scale-90"
                                 />
                                 
-                                <div className="flex-1 flex items-center gap-3 min-w-0 mr-2">
-                                    <div className={`p-2.5 rounded-2xl shrink-0 ${cat.bg} ${cat.color} shadow-sm`}>
-                                        <Icon className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center flex-wrap gap-x-2">
-                                            {item.quantity && (
-                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border shadow-sm ${cat.bg} ${cat.color} border-current/10`}>
-                                                    {item.quantity}
-                                                </span>
-                                            )}
-                                            <span className="font-extrabold text-stone-800 text-sm truncate capitalize">
-                                                {item.name}
-                                            </span>
-                                        </div>
-                                    </div>
+                                <div className="flex-1 flex items-center gap-3 min-w-0 mr-4">
+                                    {item.quantity && (
+                                        <span className="text-[11px] font-black uppercase px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 whitespace-nowrap">
+                                            {item.quantity}
+                                        </span>
+                                    )}
+                                    <span className="font-extrabold text-stone-800 text-lg truncate capitalize tracking-tight">
+                                        {item.name}
+                                    </span>
                                 </div>
 
                                 <div className="flex items-center gap-1">
                                     <button 
                                         onClick={() => startEditing(item)}
-                                        className="text-stone-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl p-2 transition-all active:scale-90"
+                                        className="text-stone-300 hover:text-stone-600 p-2.5 transition-all active:scale-90"
                                     >
-                                        <Pencil className="w-4 h-4" />
+                                        <Pencil className="w-5 h-5" />
                                     </button>
                                     <button 
                                         onClick={() => onRemoveItem(item.id)}
-                                        className="text-stone-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl p-2 transition-all active:scale-90"
+                                        className="text-stone-300 hover:text-rose-500 p-2.5 transition-all active:scale-90"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-5 h-5" />
                                     </button>
                                 </div>
                             </>
@@ -276,32 +237,33 @@ export const ShoppingListScreen: React.FC<ShoppingListScreenProps> = ({
               </div>
             )}
 
+            {/* ITENS CONCLUÍDOS - MAIS DISCRETOS */}
             {checkedItems.length > 0 && (
-              <div className="animate-in slide-in-from-bottom-4 duration-500">
-                <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-4 pl-1">
-                  Já no Carrinho ({checkedItems.length})
+              <div className="pt-6 border-t border-stone-200 animate-in slide-in-from-bottom-4">
+                <h4 className="text-[10px] font-black text-stone-300 uppercase tracking-[0.3em] mb-4 pl-1">
+                  Comprados ({checkedItems.length})
                 </h4>
-                <div className="space-y-2 opacity-50 grayscale">
+                <div className="space-y-2 opacity-40 grayscale">
                   {checkedItems.map((item) => (
                      <div 
                       key={item.id}
-                      className="flex items-center bg-stone-50/50 p-3 rounded-[1.5rem] border border-transparent group"
+                      className="flex items-center p-3 px-4 rounded-[1.5rem] border border-transparent hover:bg-stone-50 transition-all group"
                     >
                       <button
                         onClick={() => onToggleItem(item.id)}
-                        className="w-7 h-7 rounded-full bg-emerald-500 border-2 border-emerald-500 mr-4 flex items-center justify-center text-white transition-all shrink-0 shadow-lg shadow-emerald-100"
+                        className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white transition-all shrink-0 shadow-lg shadow-emerald-100"
                       >
                         <Check className="w-4 h-4 stroke-[3px]" />
                       </button>
-                      <div className="flex-1 min-w-0 mr-4">
+                      <div className="flex-1 min-w-0 mx-4">
                         <span className="text-sm font-bold text-stone-500 line-through decoration-stone-400 decoration-2 truncate block">
-                            {item.quantity && <span className="mr-1">({item.quantity})</span>}
+                            {item.quantity && <span className="mr-1.5 font-black">[{item.quantity}]</span>}
                             {item.name}
                         </span>
                       </div>
                       <button 
                         onClick={() => onRemoveItem(item.id)}
-                        className="text-stone-300 hover:text-rose-500 transition-all p-2"
+                        className="text-stone-300 hover:text-rose-500 p-2 transition-all"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
