@@ -87,14 +87,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   ];
 
   const faqItems = [
-    { q: "O app funciona com qualquer ingrediente?", a: "Sim! Nosso modelo de IA reconhece milhares de ingredientes, de vegetais comuns a temperos exóticos e até embalagens específicas." },
-    { q: "Tenho filhos pequenos, o app serve pra mim?", a: "Perfeito para você. Temos um 'Modo Família' que prioriza receitas nutritivas, com baixo teor de sódio e texturas aceitas por crianças." },
-    { q: "É realmente gratuito?", a: "Você começa com um plano gratuito generoso que inclui 3 scans por IA. Se você amar a experiência, temos o plano Chef Pro ilimitado por apenas R$ 19,90/mês." },
-    { q: "As receitas levam muito tempo para preparar?", a: "Nossa IA prioriza a praticidade. Você encontrará desde lanches de 10 minutos até pratos mais elaborados, sempre com o tempo total indicado no topo da receita." },
-    { q: "Como funciona o reconhecimento por foto?", a: "Basta tirar uma foto da sua geladeira aberta ou da sua despensa. Nossa tecnologia Gemini Vision identifica os itens e sugere combinações inteligentes em segundos." },
+    { q: "O app funciona com qualquer ingrediente?", a: "Sim! Nosso modelo de IA reconhece milhares de ingredientes, de vegetais comuns a temperos exóticos e até embalagens específicas de marcas nacionais." },
+    { q: "Tenho filhos pequenos, o app serve pra mim?", a: "Perfeito para você. Temos um 'Modo Família' que prioriza receitas nutritivas, com baixo teor de sódio e texturas aceitas por crianças pequenas." },
+    { q: "É realmente gratuito?", a: "Você começa com um plano gratuito generoso que inclui 3 scans por IA. Se você amar a experiência, temos o plano Chef Pro ilimitado por um valor mensal acessível." },
+    { q: "As receitas levam muito tempo para preparar?", a: "Nossa IA prioriza a praticidade. Você encontrará desde lanches de 10 minutos até pratos mais elaborados para o final de semana, sempre com o tempo total indicado." },
+    { q: "Como funciona o reconhecimento por foto?", a: "Basta tirar uma foto da sua geladeira aberta ou da sua despensa. Nossa tecnologia de visão computacional identifica os itens e sugere combinações inteligentes em segundos." },
+    { q: "Preciso estar conectado à internet?", a: "Sim, para garantir que as receitas sejam geradas com a tecnologia mais recente e personalizada para seus ingredientes, é necessário uma conexão ativa." },
     { q: "Posso salvar as receitas que eu mais gostei?", a: "Sim! Você tem uma aba de 'Favoritos' onde pode guardar todas as suas criações preferidas para acessar quando quiser, mesmo sem precisar tirar foto novamente." },
-    { q: "O que acontece se eu não tiver algum ingrediente da receita?", a: "O app indica exatamente o que está faltando. Você pode adicionar esses itens à sua Lista de Compras integrada com apenas um toque." },
-    { q: "Tenho alergias alimentares. O app é seguro?", a: "Sim. No seu perfil, você pode configurar restrições como 'Sem Glúten', 'Sem Lactose' ou alergias específicas. A IA filtrará todas as sugestões para garantir sua segurança." }
+    { q: "O que acontece se eu não tiver algum ingrediente da receita?", a: "O app indica exatamente o que está faltando. Você pode adicionar esses itens à sua Lista de Compras integrada com apenas um toque para não esquecer nada no mercado." },
+    { q: "Tenho alergias alimentares. O app é seguro?", a: "Sim. No seu perfil, você pode configurar restrições como 'Sem Glúten', 'Sem Lactose' ou alergias específicas. A IA filtrará todas as sugestões para garantir sua segurança alimentar." },
+    { q: "Posso usar o app em mais de um celular?", a: "Claro! Ao criar sua conta, seus dados, família e receitas favoritas ficam sincronizados na nuvem, permitindo que você acesse de qualquer dispositivo." }
   ];
 
   const menuItems = [

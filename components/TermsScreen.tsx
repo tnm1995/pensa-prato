@@ -40,7 +40,7 @@ export const TermsScreen: React.FC<TermsScreenProps> = ({ onBack }) => {
 
           <h3 className="text-lg font-bold text-gray-800 pt-4">2. Uso da Inteligência Artificial</h3>
           <p>
-            Nossas sugestões são geradas por modelos de IA (Google Gemini). Embora nos esforcemos pela precisão:
+            Nossas sugestões são geradas por modelos avançados de IA. Embora nos esforcemos pela precisão:
           </p>
           <ul className="list-disc pl-5 space-y-2">
             <li>Não garantimos que todas as identificações de ingredientes sejam 100% corretas.</li>

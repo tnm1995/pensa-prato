@@ -47,7 +47,7 @@ export const PrivacyScreen: React.FC<PrivacyScreenProps> = ({ onBack }) => {
           </p>
           <ul className="list-disc pl-5 space-y-2">
             <li>Fornecer o serviço de geração de receitas personalizadas.</li>
-            <li>Processar as imagens enviadas usando a API do Google Gemini (as imagens são processadas e não usadas para treinar modelos públicos sem consentimento).</li>
+            <li>Processar as imagens enviadas usando tecnologias de Inteligência Artificial de ponta (as imagens são processadas de forma privada e não são utilizadas para treinamento de modelos públicos sem o seu consentimento).</li>
             <li>Gerenciar sua conta e assinaturas.</li>
             <li>Melhorar a experiência do usuário e corrigir erros.</li>
           </ul>
@@ -57,14 +57,14 @@ export const PrivacyScreen: React.FC<PrivacyScreenProps> = ({ onBack }) => {
             Não vendemos seus dados pessoais. Compartilhamos informações apenas com:
           </p>
           <ul className="list-disc pl-5 space-y-2">
-            <li><strong>Google (Gemini API):</strong> Para processamento das imagens e geração de texto (receitas).</li>
-            <li><strong>Firebase (Google):</strong> Para autenticação segura e armazenamento de banco de dados.</li>
+            <li><strong>Provedores de Infraestrutura de IA:</strong> Para processamento seguro das imagens e geração de texto das receitas.</li>
+            <li><strong>Serviços de Autenticação e Nuvem:</strong> Para garantir o acesso seguro à sua conta e armazenamento de dados criptografados.</li>
             <li><strong>Autoridades Legais:</strong> Se exigido por lei.</li>
           </ul>
 
           <h3 className="text-lg font-bold text-gray-800 pt-4">4. Segurança</h3>
           <p>
-            Adotamos medidas de segurança robustas para proteger seus dados, incluindo criptografia em trânsito e armazenamento seguro em servidores do Google Cloud.
+            Adotamos medidas de segurança robustas para proteger seus dados, incluindo criptografia em trânsito e armazenamento seguro em servidores globais de alta confiabilidade.
           </p>
 
           <h3 className="text-lg font-bold text-gray-800 pt-4">5. Seus Direitos (LGPD)</h3>
@@ -74,7 +74,7 @@ export const PrivacyScreen: React.FC<PrivacyScreenProps> = ({ onBack }) => {
 
           <h3 className="text-lg font-bold text-gray-800 pt-4">6. Cookies e Rastreamento</h3>
           <p>
-            Utilizamos armazenamento local do navegador para manter sua sessão ativa e salvar preferências básicas.
+            Utilizamos armazenamento local do navegador para manter sua sessão ativa e salvar preferências básicas de uso.
           </p>
 
           <div className="pt-8 text-xs text-gray-400 border-t border-gray-100 mt-8">

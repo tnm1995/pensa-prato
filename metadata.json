@@ -1,6 +1,7 @@
+
 {
   "name": "Pensa Prato 2.1v",
-  "description": "Smart fridge assistant that identifies ingredients from photos and suggests recipes using Gemini Vision.",
+  "description": "Assistente inteligente que identifica ingredientes por fotos e sugere receitas usando Inteligência Artificial avançada.",
   "requestFramePermissions": [
     "camera",
     "microphone"

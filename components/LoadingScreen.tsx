@@ -15,7 +15,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ imagePreview, mode
     
     if (mode === 'analyzing') {
         texts = [
-            "Gemini está olhando sua geladeira...",
+            "O Chef está olhando sua geladeira...",
             "Identificando vegetais...",
             "Verificando laticínios...",
             "Analisando garrafas e potes...",
