@@ -93,49 +93,57 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 
   useEffect(() => { setRating(recipe.rating || 0); }, [recipe.rating]);
 
-  // Conversor de decimal para frações culinárias comuns
-  const decimalToFraction = (decimal: number): string => {
-    if (Number.isInteger(decimal)) return decimal.toString();
-    
-    const tolerance = 0.05;
-    const fractions = [
-      { val: 0.25, label: '1/4' },
-      { val: 0.33, label: '1/3' },
-      { val: 0.5, label: '1/2' },
-      { val: 0.66, label: '2/3' },
-      { val: 0.75, label: '3/4' }
-    ];
+  // Simplificador de frações e conversor de decimais
+  const formatCulinaryNumber = (num: number): string => {
+    if (num <= 0) return "";
+    if (Number.isInteger(num)) return num.toString();
 
-    const whole = Math.floor(decimal);
-    const remainder = decimal - whole;
+    // Tolerância para arredondamento de IA
+    const eps = 0.02;
+    const whole = Math.floor(num);
+    const frac = num - whole;
 
-    if (remainder < tolerance) return whole.toString();
-    if (remainder > (1 - tolerance)) return (whole + 1).toString();
+    const findFrac = (val: number) => {
+      if (val < 0.125) return ""; // muito pequeno
+      if (Math.abs(val - 0.25) < eps) return "1/4";
+      if (Math.abs(val - 0.33) < 0.05) return "1/3";
+      if (Math.abs(val - 0.5) < eps) return "1/2";
+      if (Math.abs(val - 0.66) < 0.05) return "2/3";
+      if (Math.abs(val - 0.75) < eps) return "3/4";
+      if (Math.abs(val - 0.125) < eps) return "1/8";
+      return null;
+    };
 
-    for (const f of fractions) {
-      if (Math.abs(remainder - f.val) < tolerance) {
-        return whole > 0 ? `${whole} ${f.label}` : f.label;
-      }
+    const fracLabel = findFrac(frac);
+    if (fracLabel !== null) {
+      return whole > 0 ? `${whole} ${fracLabel}` : fracLabel;
     }
 
-    return decimal.toFixed(1).replace('.', ',');
+    if (Math.abs(frac - 0.95) < 0.05) return (whole + 1).toString();
+
+    return num.toFixed(1).replace('.', ',');
   };
 
+  const normalizeString = (str: string) => 
+    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
   const isInShoppingList = (ingredientName: string) => {
-    const normalized = ingredientName.toLowerCase().trim();
-    return (shoppingList || []).some(item => 
-      item.name.toLowerCase().trim().includes(normalized) || 
-      normalized.includes(item.name.toLowerCase().trim())
-    );
+    const rawName = ingredientName.replace(/(\d+(?:[.,]\d+)?|\d+\/\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?/g, '').trim();
+    const normalized = normalizeString(rawName);
+    if (!normalized) return false;
+    
+    return (shoppingList || []).some(item => {
+      const itemName = normalizeString(item.name);
+      return itemName.includes(normalized) || normalized.includes(itemName);
+    });
   };
 
   const scaleText = (text: string, originalServings: number, newServings: number): string => {
     if (!text) return "";
     const ratio = newServings / originalServings;
-    if (ratio === 1) return text;
-
-    // Regex para capturar números decimais ou frações seguidos opcionalmente por uma unidade
-    return text.replace(/(\d+(?:[.,]\d+)?|\d+\/\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?/g, (match, numberStr, space, unit) => {
+    
+    // Regex melhorada: captura números puros, decimais e frações (mesmo as estranhas como 2/8)
+    return text.replace(/(\d+[\/.,]\d+|\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?/g, (match, numberStr, space, unit) => {
         const lowerUnit = unit ? unit.toLowerCase() : '';
         const forbiddenUnits = ['min', 'minuto', 'h', 'grau', '°', 'c', 'passo', 'º'];
         
@@ -143,8 +151,8 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 
         let value: number;
         if (numberStr.includes('/')) {
-            const [num, den] = numberStr.split('/').map(Number);
-            value = num / den;
+            const parts = numberStr.split('/');
+            value = parseInt(parts[0]) / parseInt(parts[1]);
         } else {
             value = parseFloat(numberStr.replace(',', '.'));
         }
@@ -152,7 +160,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         if (isNaN(value)) return match;
         
         const scaledValue = value * ratio;
-        return `${decimalToFraction(scaledValue)}${space}${unit || ''}`;
+        return `${formatCulinaryNumber(scaledValue)}${space}${unit || ''}`;
     });
   };
 
@@ -195,9 +203,14 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   };
 
   const handleAddIngredientToList = (ing: string) => {
-    // Tenta extrair apenas o nome do ingrediente (removendo quantidades)
-    const nameOnly = ing.replace(/(\d+(?:[.,]\d+)?|\d+\/\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?/g, '').trim();
-    onAddToShoppingList(nameOnly || ing, "1x");
+    // Regex para extrair a quantidade (primeira parte numérica + unidade)
+    const qtyMatch = ing.match(/^(\d+[\/.,]\d+|\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?/);
+    const quantity = qtyMatch ? qtyMatch[0] : "1x";
+    
+    // Nome do ingrediente é o que sobra
+    const nameOnly = ing.replace(/^(\d+[\/.,]\d+|\d+)(\s*)([a-zA-ZÀ-ÿ°º]+)?\s*(de\s+)?/i, '').trim();
+    
+    onAddToShoppingList(nameOnly || ing, quantity);
   };
 
   if (cookingMode) {
