@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ArrowLeft, 
   ChevronRight, 
@@ -17,8 +17,10 @@ import {
   Zap,
   Target,
   Award,
-  // Fix: Added missing icon import
-  CheckCircle2
+  CheckCircle2,
+  Plus,
+  X,
+  Sparkles
 } from 'lucide-react';
 import { FamilyMember, WasteStats } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -44,6 +46,11 @@ const ALL_BADGES = [
     { id: 'heroi', name: 'Herói', icon: Trophy, color: 'text-amber-500', bg: 'bg-amber-100', desc: '20+ Receitas' },
 ];
 
+const PANTRY_SUGGESTIONS = [
+    "Sal", "Açúcar", "Óleo", "Azeite", "Arroz", "Feijão", "Café", 
+    "Manteiga", "Farinha de Trigo", "Pimenta", "Alho", "Cebola", "Ovos"
+];
+
 const getLevelTitle = (level: number) => {
     if (level < 3) return "Ajudante de Cozinha";
     if (level < 7) return "Cozinheiro Amador";
@@ -64,16 +71,25 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 }) => {
   const { name = 'Usuário', avatar = '' } = userProfile || {};
   const [isEditingPantry, setIsEditingPantry] = useState(false);
-  const [tempPantry, setTempPantry] = useState(pantry.join(', '));
+  const [newItemName, setNewItemName] = useState('');
 
   const currentLevelXP = wasteStats.xp % XP_PER_LEVEL;
   const xpProgress = (currentLevelXP / XP_PER_LEVEL) * 100;
   const levelTitle = getLevelTitle(wasteStats.level || 1);
 
-  const handleSavePantry = () => {
-      const items = tempPantry.split(',').map(i => i.trim()).filter(i => i.length > 0);
-      onUpdatePantry(items);
-      setIsEditingPantry(false);
+  const handleAddItem = (item: string) => {
+      const normalized = item.trim();
+      if (!normalized) return;
+      if (pantry.some(p => p.toLowerCase() === normalized.toLowerCase())) {
+          setNewItemName('');
+          return;
+      }
+      onUpdatePantry([...pantry, normalized]);
+      setNewItemName('');
+  };
+
+  const handleRemoveItem = (itemToRemove: string) => {
+      onUpdatePantry(pantry.filter(p => p !== itemToRemove));
   };
 
   const renderProfileAvatar = () => {
@@ -100,6 +116,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
+
+  const pantrySuggestions = useMemo(() => {
+    return PANTRY_SUGGESTIONS.filter(s => !pantry.some(p => p.toLowerCase() === s.toLowerCase()));
+  }, [pantry]);
 
   return (
     <motion.div 
@@ -221,7 +241,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <motion.div variants={itemVariants}>
             <div className="flex items-center justify-between mb-5 px-1">
                 <h3 className="text-sm font-black text-stone-800 uppercase tracking-widest flex items-center gap-2">
-                    <Award className="w-5 h-5 text-emerald-500" /> Coleção de Emblemas
+                    <Award className="w-5 h-5 text-emerald-500" /> Emblemas
                 </h3>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
@@ -244,7 +264,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
         </motion.div>
 
-        {/* --- MINHA DESPENSA --- */}
+        {/* --- MINHA DESPENSA PREMIUM --- */}
         <motion.div variants={itemVariants} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50/30 rounded-full blur-2xl pointer-events-none"></div>
             
@@ -254,7 +274,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </h3>
                 <motion.button 
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => isEditingPantry ? handleSavePantry() : setIsEditingPantry(true)} 
+                    onClick={() => setIsEditingPantry(!isEditingPantry)} 
                     className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl transition-all ${isEditingPantry ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' : 'text-emerald-600 bg-emerald-50'}`}
                 >
                     {isEditingPantry ? 'Concluído' : 'Editar'}
@@ -267,21 +287,69 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        key="edit"
+                        key="edit-pantry"
+                        className="space-y-6"
                     >
-                        <textarea 
-                            className="w-full p-4 bg-stone-50 border border-stone-200 rounded-[1.5rem] text-xs font-medium h-32 outline-none focus:ring-2 focus:ring-emerald-100 transition-all resize-none" 
-                            value={tempPantry} 
-                            onChange={(e) => setTempPantry(e.target.value)}
-                            placeholder="Separe os itens por vírgula..."
-                        />
-                        <p className="text-[9px] text-stone-400 font-bold mt-2 px-1">Ex: Arroz, feijão, café, sal, açúcar...</p>
+                        {/* Input Area */}
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                value={newItemName}
+                                onChange={(e) => setNewItemName(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddItem(newItemName)}
+                                placeholder="Adicionar item..."
+                                className="flex-1 bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-100"
+                            />
+                            <button 
+                                onClick={() => handleAddItem(newItemName)}
+                                className="p-3 bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-100 active:scale-90 transition-transform"
+                            >
+                                <Plus className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Current Items (Removable) */}
+                        <div className="flex flex-wrap gap-2">
+                            {pantry.map((item, idx) => (
+                                <motion.span 
+                                    layout
+                                    key={idx} 
+                                    className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-2 rounded-xl border border-emerald-100 flex items-center gap-2"
+                                >
+                                    {item}
+                                    <button onClick={() => handleRemoveItem(item)} className="hover:text-red-500">
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </motion.span>
+                            ))}
+                        </div>
+
+                        {/* Suggestions Area */}
+                        {pantrySuggestions.length > 0 && (
+                            <div className="pt-2">
+                                <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <Sparkles className="w-3 h-3 text-amber-400" /> Sugestões de Básicos
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {pantrySuggestions.slice(0, 8).map((suggestion, idx) => (
+                                        <button 
+                                            key={idx}
+                                            onClick={() => handleAddItem(suggestion)}
+                                            className="bg-stone-50 hover:bg-stone-100 text-stone-500 text-[9px] font-bold px-3 py-1.5 rounded-lg border border-stone-200 transition-colors flex items-center gap-1.5"
+                                        >
+                                            <Plus className="w-2.5 h-2.5" />
+                                            {suggestion}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
                 ) : (
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        key="view"
+                        key="view-pantry"
                         className="flex flex-wrap gap-2 relative z-10"
                     >
                         {pantry.length > 0 ? pantry.map((item, idx) => (
@@ -300,7 +368,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </AnimatePresence>
         </motion.div>
 
-        {/* --- RECENT ACTIVITY MOCK --- */}
+        {/* --- DAILY MISSION --- */}
         <motion.div variants={itemVariants} className="bg-stone-900 p-6 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
             <div className="relative z-10 flex items-center justify-between">
